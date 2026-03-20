@@ -39,13 +39,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="text-center py-20">
+        <div className="text-center py-12">
           <h2 className="text-white text-4xl font-bold mb-4">CV şablonunu seç</h2>
           <p className="text-gray-400 text-lg mb-12">Beğendiğin şablonu seç, yapay zeka CV'ni oluştursun</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {['Modern', 'Klasik', 'Minimal'].map((template) => (
               <div
                 key={template}
+                onClick={() => router.push(`/create-cv?template=${template}`)}
                 className="bg-gray-900 border border-gray-800 hover:border-blue-500 rounded-2xl p-8 cursor-pointer transition-all group"
               >
                 <div className="w-full h-48 bg-gray-800 rounded-xl mb-4 flex items-center justify-center group-hover:bg-gray-700 transition-all">
