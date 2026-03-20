@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { supabase } from '../lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 
@@ -482,8 +483,19 @@ function CreateCVContent() {
         body: JSON.stringify({ cvContent: cvText, template, isRawText: mode === 'text' })
       })
       const data = await response.json()
-      if (data.success) setCvData(data.cvData)
-      else alert('Hata: ' + data.error)
+      if (data.success) {
+        setCvData(data.cvData)
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          await supabase.from('cvs').insert({
+            user_id: user.id,
+            template: template,
+            cv_data: data.cvData
+          })
+        }
+      } else {
+        alert('Hata: ' + data.error)
+      }
     } catch (error) {
       alert('Bir hata oluştu')
     }

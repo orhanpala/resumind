@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation'
 
 const templates = [
   {
-    id: 'Modern',
-    name: 'Modern',
-    desc: 'Mavi başlık, temiz çizgiler',
+    id: 'Modern', name: 'Modern', desc: 'Mavi başlık, temiz çizgiler',
     preview: (
       <div className="w-full h-full bg-white rounded-lg overflow-hidden">
         <div className="bg-blue-600 p-2">
@@ -26,9 +24,7 @@ const templates = [
     )
   },
   {
-    id: 'Klasik',
-    name: 'Klasik',
-    desc: 'Siyah başlık, resmi görünüm',
+    id: 'Klasik', name: 'Klasik', desc: 'Siyah başlık, resmi görünüm',
     preview: (
       <div className="w-full h-full bg-white rounded-lg overflow-hidden">
         <div className="bg-gray-900 p-2">
@@ -48,9 +44,7 @@ const templates = [
     )
   },
   {
-    id: 'Minimal',
-    name: 'Minimal',
-    desc: 'Sade, beyaz ağırlıklı',
+    id: 'Minimal', name: 'Minimal', desc: 'Sade, beyaz ağırlıklı',
     preview: (
       <div className="w-full h-full bg-white rounded-lg p-2">
         <div className="h-3 bg-gray-800 rounded w-2/3 mb-1"></div>
@@ -65,9 +59,7 @@ const templates = [
     )
   },
   {
-    id: 'Kreatif',
-    name: 'Kreatif',
-    desc: 'Mor tonlar, yaratıcı tasarım',
+    id: 'Kreatif', name: 'Kreatif', desc: 'Mor tonlar, yaratıcı tasarım',
     preview: (
       <div className="w-full h-full bg-white rounded-lg overflow-hidden">
         <div className="bg-gradient-to-r from-purple-600 to-pink-500 p-2">
@@ -79,18 +71,16 @@ const templates = [
           <div className="h-1 bg-gray-200 rounded w-full mb-1"></div>
           <div className="h-1 bg-gray-200 rounded w-5/6 mb-2"></div>
           <div className="flex gap-1 mb-2">
-            <div className="h-3 bg-purple-100 rounded-full px-2 w-8"></div>
-            <div className="h-3 bg-purple-100 rounded-full px-2 w-10"></div>
-            <div className="h-3 bg-purple-100 rounded-full px-2 w-6"></div>
+            <div className="h-3 bg-purple-100 rounded-full w-8"></div>
+            <div className="h-3 bg-purple-100 rounded-full w-10"></div>
+            <div className="h-3 bg-purple-100 rounded-full w-6"></div>
           </div>
         </div>
       </div>
     )
   },
   {
-    id: 'Teknoloji',
-    name: 'Teknoloji',
-    desc: 'Koyu tema, yazılımcı stili',
+    id: 'Teknoloji', name: 'Teknoloji', desc: 'Koyu tema, yazılımcı stili',
     preview: (
       <div className="w-full h-full bg-gray-900 rounded-lg overflow-hidden">
         <div className="border-b border-green-500 p-2">
@@ -110,9 +100,7 @@ const templates = [
     )
   },
   {
-    id: 'Elegant',
-    name: 'Elegant',
-    desc: 'Gold detaylar, şık tasarım',
+    id: 'Elegant', name: 'Elegant', desc: 'Gold detaylar, şık tasarım',
     preview: (
       <div className="w-full h-full bg-amber-50 rounded-lg overflow-hidden">
         <div className="border-b-2 border-amber-600 p-2">
@@ -130,9 +118,7 @@ const templates = [
     )
   },
   {
-    id: 'Kompakt',
-    name: 'Kompakt',
-    desc: 'İki sütunlu, bilgi yoğun',
+    id: 'Kompakt', name: 'Kompakt', desc: 'İki sütunlu, bilgi yoğun',
     preview: (
       <div className="w-full h-full bg-white rounded-lg overflow-hidden flex">
         <div className="bg-slate-700 w-1/3 p-1">
@@ -155,9 +141,7 @@ const templates = [
     )
   },
   {
-    id: 'Akademik',
-    name: 'Akademik',
-    desc: 'Resmi, akademik format',
+    id: 'Akademik', name: 'Akademik', desc: 'Resmi, akademik format',
     preview: (
       <div className="w-full h-full bg-white rounded-lg p-2">
         <div className="text-center mb-2">
@@ -177,13 +161,22 @@ const templates = [
 
 export default function Dashboard() {
   const [user, setUser] = useState(null)
+  const [pastCVs, setPastCVs] = useState([])
+  const [activeTab, setActiveTab] = useState('templates')
   const router = useRouter()
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) router.push('/login')
-      else setUser(user)
+      else {
+        setUser(user)
+        const { data } = await supabase
+          .from('cvs')
+          .select('*')
+          .order('created_at', { ascending: false })
+        if (data) setPastCVs(data)
+      }
     }
     getUser()
   }, [])
@@ -191,6 +184,11 @@ export default function Dashboard() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  const handleDeleteCV = async (id) => {
+    await supabase.from('cvs').delete().eq('id', id)
+    setPastCVs(pastCVs.filter(cv => cv.id !== id))
   }
 
   if (!user) return (
@@ -202,39 +200,107 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-950">
       <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-12">
+
+        <div className="flex items-center justify-between mb-8">
           <h1 className="text-white text-2xl font-bold">Resumind</h1>
           <div className="flex items-center gap-4">
             <p className="text-gray-400 text-sm">{user.email}</p>
-            <button
-              onClick={handleLogout}
-              className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-xl transition-all"
-            >
+            <button onClick={handleLogout} className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-xl transition-all">
               Çıkış Yap
             </button>
           </div>
         </div>
 
-        <div className="mb-12">
-          <h2 className="text-white text-3xl font-bold mb-2">CV şablonunu seç</h2>
-          <p className="text-gray-400">Beğendiğin şablonu seç, yapay zeka CV'ni oluştursun</p>
+        <div className="flex gap-2 mb-8">
+          <button
+            onClick={() => setActiveTab('templates')}
+            className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'templates' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+          >
+            Şablonlar
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'history' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+          >
+            Geçmiş CV'ler {pastCVs.length > 0 && <span className="ml-1 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">{pastCVs.length}</span>}
+          </button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {templates.map((template) => (
-            <div
-              key={template.id}
-              onClick={() => router.push(`/create-cv?template=${template.id}`)}
-              className="bg-gray-900 border border-gray-800 hover:border-blue-500 rounded-2xl p-4 cursor-pointer transition-all group"
-            >
-              <div className="w-full h-36 bg-gray-800 rounded-xl mb-3 overflow-hidden group-hover:ring-2 group-hover:ring-blue-500 transition-all">
-                {template.preview}
-              </div>
-              <h3 className="text-white font-medium">{template.name}</h3>
-              <p className="text-gray-500 text-xs mt-1">{template.desc}</p>
+        {activeTab === 'templates' && (
+          <div>
+            <div className="mb-8">
+              <h2 className="text-white text-3xl font-bold mb-2">CV şablonunu seç</h2>
+              <p className="text-gray-400">Beğendiğin şablonu seç, yapay zeka CV'ni oluştursun</p>
             </div>
-          ))}
-        </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {templates.map((template) => (
+                <div
+                  key={template.id}
+                  onClick={() => router.push(`/create-cv?template=${template.id}`)}
+                  className="bg-gray-900 border border-gray-800 hover:border-blue-500 rounded-2xl p-4 cursor-pointer transition-all group"
+                >
+                  <div className="w-full h-36 bg-gray-800 rounded-xl mb-3 overflow-hidden group-hover:ring-2 group-hover:ring-blue-500 transition-all">
+                    {template.preview}
+                  </div>
+                  <h3 className="text-white font-medium">{template.name}</h3>
+                  <p className="text-gray-500 text-xs mt-1">{template.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'history' && (
+          <div>
+            <div className="mb-8">
+              <h2 className="text-white text-3xl font-bold mb-2">Geçmiş CV'ler</h2>
+              <p className="text-gray-400">Daha önce oluşturduğun CV'ler</p>
+            </div>
+            {pastCVs.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-gray-500 text-lg mb-4">Henüz CV oluşturmadın</p>
+                <button
+                  onClick={() => setActiveTab('templates')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl"
+                >
+                  İlk CV'ni Oluştur
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {pastCVs.map((cv) => (
+                  <div key={cv.id} className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="text-white font-semibold text-lg">{cv.cv_data.name}</h3>
+                        <p className="text-blue-400 text-sm">{cv.template} şablonu</p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteCV(cv.id)}
+                        className="text-gray-600 hover:text-red-400 text-sm transition-all"
+                      >
+                        🗑
+                      </button>
+                    </div>
+                    <p className="text-gray-500 text-sm mb-4 line-clamp-2">{cv.cv_data.summary}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-gray-600 text-xs">
+                        {new Date(cv.created_at).toLocaleDateString('tr-TR')}
+                      </p>
+                      <button
+                        onClick={() => router.push(`/create-cv?template=${cv.template}`)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl transition-all"
+                      >
+                        Tekrar Oluştur
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   )
