@@ -3,6 +3,178 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRouter } from 'next/navigation'
 
+const templates = [
+  {
+    id: 'Modern',
+    name: 'Modern',
+    desc: 'Mavi başlık, temiz çizgiler',
+    preview: (
+      <div className="w-full h-full bg-white rounded-lg overflow-hidden">
+        <div className="bg-blue-600 p-2">
+          <div className="h-2 bg-white bg-opacity-80 rounded w-3/4 mb-1"></div>
+          <div className="h-1 bg-blue-300 rounded w-1/2"></div>
+        </div>
+        <div className="p-2">
+          <div className="h-1 bg-blue-600 rounded w-1/3 mb-2"></div>
+          <div className="h-1 bg-gray-200 rounded w-full mb-1"></div>
+          <div className="h-1 bg-gray-200 rounded w-5/6 mb-2"></div>
+          <div className="h-1 bg-blue-600 rounded w-1/3 mb-2"></div>
+          <div className="h-1 bg-gray-200 rounded w-full mb-1"></div>
+          <div className="h-1 bg-gray-200 rounded w-4/6"></div>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'Klasik',
+    name: 'Klasik',
+    desc: 'Siyah başlık, resmi görünüm',
+    preview: (
+      <div className="w-full h-full bg-white rounded-lg overflow-hidden">
+        <div className="bg-gray-900 p-2">
+          <div className="h-2 bg-white bg-opacity-80 rounded w-3/4 mb-1"></div>
+          <div className="h-1 bg-gray-400 rounded w-1/2"></div>
+        </div>
+        <div className="p-2">
+          <div className="h-1 bg-gray-800 rounded w-1/3 mb-1 mt-1"></div>
+          <div className="h-px bg-gray-300 w-full mb-2"></div>
+          <div className="h-1 bg-gray-200 rounded w-full mb-1"></div>
+          <div className="h-1 bg-gray-200 rounded w-5/6 mb-2"></div>
+          <div className="h-1 bg-gray-800 rounded w-1/3 mb-1"></div>
+          <div className="h-px bg-gray-300 w-full mb-2"></div>
+          <div className="h-1 bg-gray-200 rounded w-full mb-1"></div>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'Minimal',
+    name: 'Minimal',
+    desc: 'Sade, beyaz ağırlıklı',
+    preview: (
+      <div className="w-full h-full bg-white rounded-lg p-2">
+        <div className="h-3 bg-gray-800 rounded w-2/3 mb-1"></div>
+        <div className="h-1 bg-gray-300 rounded w-1/2 mb-3"></div>
+        <div className="h-1 bg-gray-200 rounded w-1/4 mb-2"></div>
+        <div className="h-1 bg-gray-100 rounded w-full mb-1"></div>
+        <div className="h-1 bg-gray-100 rounded w-5/6 mb-3"></div>
+        <div className="h-1 bg-gray-200 rounded w-1/4 mb-2"></div>
+        <div className="h-1 bg-gray-100 rounded w-full mb-1"></div>
+        <div className="h-1 bg-gray-100 rounded w-4/6"></div>
+      </div>
+    )
+  },
+  {
+    id: 'Kreatif',
+    name: 'Kreatif',
+    desc: 'Mor tonlar, yaratıcı tasarım',
+    preview: (
+      <div className="w-full h-full bg-white rounded-lg overflow-hidden">
+        <div className="bg-gradient-to-r from-purple-600 to-pink-500 p-2">
+          <div className="h-2 bg-white bg-opacity-80 rounded w-3/4 mb-1"></div>
+          <div className="h-1 bg-purple-200 rounded w-1/2"></div>
+        </div>
+        <div className="p-2">
+          <div className="h-1 bg-purple-500 rounded w-1/3 mb-2"></div>
+          <div className="h-1 bg-gray-200 rounded w-full mb-1"></div>
+          <div className="h-1 bg-gray-200 rounded w-5/6 mb-2"></div>
+          <div className="flex gap-1 mb-2">
+            <div className="h-3 bg-purple-100 rounded-full px-2 w-8"></div>
+            <div className="h-3 bg-purple-100 rounded-full px-2 w-10"></div>
+            <div className="h-3 bg-purple-100 rounded-full px-2 w-6"></div>
+          </div>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'Teknoloji',
+    name: 'Teknoloji',
+    desc: 'Koyu tema, yazılımcı stili',
+    preview: (
+      <div className="w-full h-full bg-gray-900 rounded-lg overflow-hidden">
+        <div className="border-b border-green-500 p-2">
+          <div className="h-2 bg-green-400 rounded w-3/4 mb-1"></div>
+          <div className="h-1 bg-green-800 rounded w-1/2"></div>
+        </div>
+        <div className="p-2">
+          <div className="h-1 bg-green-500 rounded w-1/3 mb-2"></div>
+          <div className="h-1 bg-gray-700 rounded w-full mb-1"></div>
+          <div className="h-1 bg-gray-700 rounded w-5/6 mb-2"></div>
+          <div className="flex gap-1">
+            <div className="h-3 bg-green-900 border border-green-700 rounded w-8"></div>
+            <div className="h-3 bg-green-900 border border-green-700 rounded w-10"></div>
+          </div>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'Elegant',
+    name: 'Elegant',
+    desc: 'Gold detaylar, şık tasarım',
+    preview: (
+      <div className="w-full h-full bg-amber-50 rounded-lg overflow-hidden">
+        <div className="border-b-2 border-amber-600 p-2">
+          <div className="h-2 bg-amber-800 rounded w-3/4 mb-1"></div>
+          <div className="h-1 bg-amber-400 rounded w-1/2"></div>
+        </div>
+        <div className="p-2">
+          <div className="h-1 bg-amber-600 rounded w-1/3 mb-2"></div>
+          <div className="h-1 bg-amber-200 rounded w-full mb-1"></div>
+          <div className="h-1 bg-amber-200 rounded w-5/6 mb-2"></div>
+          <div className="h-1 bg-amber-600 rounded w-1/3 mb-2"></div>
+          <div className="h-1 bg-amber-200 rounded w-full mb-1"></div>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'Kompakt',
+    name: 'Kompakt',
+    desc: 'İki sütunlu, bilgi yoğun',
+    preview: (
+      <div className="w-full h-full bg-white rounded-lg overflow-hidden flex">
+        <div className="bg-slate-700 w-1/3 p-1">
+          <div className="w-6 h-6 bg-slate-400 rounded-full mx-auto mb-1"></div>
+          <div className="h-1 bg-slate-400 rounded w-full mb-1"></div>
+          <div className="h-1 bg-slate-500 rounded w-4/5 mb-2"></div>
+          <div className="h-1 bg-slate-400 rounded w-full mb-1"></div>
+          <div className="h-1 bg-slate-500 rounded w-3/4"></div>
+        </div>
+        <div className="flex-1 p-1">
+          <div className="h-1 bg-slate-700 rounded w-3/4 mb-1"></div>
+          <div className="h-px bg-slate-200 w-full mb-1"></div>
+          <div className="h-1 bg-gray-200 rounded w-full mb-1"></div>
+          <div className="h-1 bg-gray-200 rounded w-5/6 mb-2"></div>
+          <div className="h-1 bg-slate-700 rounded w-3/4 mb-1"></div>
+          <div className="h-px bg-slate-200 w-full mb-1"></div>
+          <div className="h-1 bg-gray-200 rounded w-full"></div>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'Akademik',
+    name: 'Akademik',
+    desc: 'Resmi, akademik format',
+    preview: (
+      <div className="w-full h-full bg-white rounded-lg p-2">
+        <div className="text-center mb-2">
+          <div className="h-2 bg-gray-800 rounded w-1/2 mx-auto mb-1"></div>
+          <div className="h-1 bg-gray-400 rounded w-2/3 mx-auto mb-1"></div>
+          <div className="h-px bg-gray-800 w-full"></div>
+        </div>
+        <div className="h-1 bg-gray-700 rounded w-1/3 mb-1"></div>
+        <div className="h-1 bg-gray-200 rounded w-full mb-1"></div>
+        <div className="h-1 bg-gray-200 rounded w-5/6 mb-2"></div>
+        <div className="h-1 bg-gray-700 rounded w-1/3 mb-1"></div>
+        <div className="h-1 bg-gray-200 rounded w-full mb-1"></div>
+      </div>
+    )
+  }
+]
+
 export default function Dashboard() {
   const [user, setUser] = useState(null)
   const router = useRouter()
@@ -21,7 +193,11 @@ export default function Dashboard() {
     router.push('/login')
   }
 
-  if (!user) return <div className="min-h-screen bg-gray-950 flex items-center justify-center"><p className="text-white">Yükleniyor...</p></div>
+  if (!user) return (
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <p className="text-white">Yükleniyor...</p>
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -39,24 +215,25 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="text-center py-12">
-          <h2 className="text-white text-4xl font-bold mb-4">CV şablonunu seç</h2>
-          <p className="text-gray-400 text-lg mb-12">Beğendiğin şablonu seç, yapay zeka CV'ni oluştursun</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {['Modern', 'Klasik', 'Minimal'].map((template) => (
-              <div
-                key={template}
-                onClick={() => router.push(`/create-cv?template=${template}`)}
-                className="bg-gray-900 border border-gray-800 hover:border-blue-500 rounded-2xl p-8 cursor-pointer transition-all group"
-              >
-                <div className="w-full h-48 bg-gray-800 rounded-xl mb-4 flex items-center justify-center group-hover:bg-gray-700 transition-all">
-                  <p className="text-gray-500 text-sm">Önizleme</p>
-                </div>
-                <h3 className="text-white font-medium text-lg">{template}</h3>
-                <p className="text-gray-400 text-sm mt-1">Profesyonel {template.toLowerCase()} tasarım</p>
+        <div className="mb-12">
+          <h2 className="text-white text-3xl font-bold mb-2">CV şablonunu seç</h2>
+          <p className="text-gray-400">Beğendiğin şablonu seç, yapay zeka CV'ni oluştursun</p>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {templates.map((template) => (
+            <div
+              key={template.id}
+              onClick={() => router.push(`/create-cv?template=${template.id}`)}
+              className="bg-gray-900 border border-gray-800 hover:border-blue-500 rounded-2xl p-4 cursor-pointer transition-all group"
+            >
+              <div className="w-full h-36 bg-gray-800 rounded-xl mb-3 overflow-hidden group-hover:ring-2 group-hover:ring-blue-500 transition-all">
+                {template.preview}
               </div>
-            ))}
-          </div>
+              <h3 className="text-white font-medium">{template.name}</h3>
+              <p className="text-gray-500 text-xs mt-1">{template.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>
