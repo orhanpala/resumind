@@ -2,6 +2,172 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+function ModernCV({ cvData }) {
+  return (
+    <div id="cv-preview" className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="bg-blue-600 px-10 py-8">
+        <h2 className="text-white text-3xl font-bold">{cvData.name}</h2>
+        <div className="flex gap-4 mt-2 text-blue-100 text-sm flex-wrap">
+          {cvData.email && <span>✉ {cvData.email}</span>}
+          {cvData.phone && <span>📞 {cvData.phone}</span>}
+          {cvData.location && <span>📍 {cvData.location}</span>}
+        </div>
+        {cvData.summary && <p className="text-blue-50 mt-3 text-sm leading-relaxed">{cvData.summary}</p>}
+      </div>
+      <div className="p-10">
+        {cvData.experience?.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-blue-600 font-bold text-lg mb-4 uppercase tracking-wide border-b-2 border-blue-600 pb-1">Deneyim</h3>
+            {cvData.experience.map((exp, i) => (
+              <div key={i} className="mb-4 pl-4 border-l-2 border-blue-200">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-gray-900 font-semibold">{exp.position}</p>
+                    <p className="text-blue-600 text-sm">{exp.company}</p>
+                  </div>
+                  <p className="text-gray-400 text-sm">{exp.duration}</p>
+                </div>
+                {exp.description && <p className="text-gray-600 text-sm mt-1">{exp.description}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+        {cvData.education?.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-blue-600 font-bold text-lg mb-4 uppercase tracking-wide border-b-2 border-blue-600 pb-1">Eğitim</h3>
+            {cvData.education.map((edu, i) => (
+              <div key={i} className="mb-2 pl-4 border-l-2 border-blue-200">
+                <p className="text-gray-900 font-semibold">{edu.school}</p>
+                <p className="text-gray-500 text-sm">{edu.degree} — {edu.year}</p>
+              </div>
+            ))}
+          </div>
+        )}
+        {cvData.skills?.length > 0 && (
+          <div>
+            <h3 className="text-blue-600 font-bold text-lg mb-4 uppercase tracking-wide border-b-2 border-blue-600 pb-1">Beceriler</h3>
+            <div className="flex flex-wrap gap-2">
+              {cvData.skills.map((skill, i) => (
+                <span key={i} className="bg-blue-50 text-blue-700 text-sm px-3 py-1 rounded-full border border-blue-200">{skill}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function KlasikCV({ cvData }) {
+  return (
+    <div id="cv-preview" className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="bg-gray-900 px-10 py-8">
+        <h2 className="text-white text-3xl font-bold tracking-wide">{cvData.name}</h2>
+        <div className="flex gap-4 mt-2 text-gray-300 text-sm flex-wrap">
+          {cvData.email && <span>{cvData.email}</span>}
+          {cvData.phone && <span>{cvData.phone}</span>}
+          {cvData.location && <span>{cvData.location}</span>}
+        </div>
+        {cvData.summary && <p className="text-gray-300 mt-3 text-sm leading-relaxed">{cvData.summary}</p>}
+      </div>
+      <div className="p-10">
+        {cvData.experience?.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-gray-900 font-bold text-lg mb-4 uppercase tracking-widest border-b border-gray-300 pb-1">Deneyim</h3>
+            {cvData.experience.map((exp, i) => (
+              <div key={i} className="mb-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-gray-900 font-semibold">{exp.position}</p>
+                    <p className="text-gray-600 text-sm italic">{exp.company}</p>
+                  </div>
+                  <p className="text-gray-500 text-sm">{exp.duration}</p>
+                </div>
+                {exp.description && <p className="text-gray-600 text-sm mt-1">{exp.description}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+        {cvData.education?.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-gray-900 font-bold text-lg mb-4 uppercase tracking-widest border-b border-gray-300 pb-1">Eğitim</h3>
+            {cvData.education.map((edu, i) => (
+              <div key={i} className="mb-2">
+                <p className="text-gray-900 font-semibold">{edu.school}</p>
+                <p className="text-gray-500 text-sm">{edu.degree} — {edu.year}</p>
+              </div>
+            ))}
+          </div>
+        )}
+        {cvData.skills?.length > 0 && (
+          <div>
+            <h3 className="text-gray-900 font-bold text-lg mb-4 uppercase tracking-widest border-b border-gray-300 pb-1">Beceriler</h3>
+            <div className="flex flex-wrap gap-2">
+              {cvData.skills.map((skill, i) => (
+                <span key={i} className="bg-gray-100 text-gray-700 text-sm px-3 py-1 border border-gray-300">{skill}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function MinimalCV({ cvData }) {
+  return (
+    <div id="cv-preview" className="bg-white rounded-2xl shadow-2xl p-10">
+      <div className="mb-8">
+        <h2 className="text-gray-900 text-4xl font-light">{cvData.name}</h2>
+        <div className="flex gap-4 mt-2 text-gray-400 text-sm flex-wrap">
+          {cvData.email && <span>{cvData.email}</span>}
+          {cvData.phone && <span>{cvData.phone}</span>}
+          {cvData.location && <span>{cvData.location}</span>}
+        </div>
+        {cvData.summary && <p className="text-gray-500 mt-3 text-sm leading-relaxed">{cvData.summary}</p>}
+      </div>
+      {cvData.experience?.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-gray-300 font-medium text-xs mb-4 uppercase tracking-widest">Deneyim</h3>
+          {cvData.experience.map((exp, i) => (
+            <div key={i} className="mb-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-gray-900 font-medium">{exp.position}</p>
+                  <p className="text-gray-400 text-sm">{exp.company}</p>
+                </div>
+                <p className="text-gray-300 text-sm">{exp.duration}</p>
+              </div>
+              {exp.description && <p className="text-gray-500 text-sm mt-1">{exp.description}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+      {cvData.education?.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-gray-300 font-medium text-xs mb-4 uppercase tracking-widest">Eğitim</h3>
+          {cvData.education.map((edu, i) => (
+            <div key={i} className="mb-2">
+              <p className="text-gray-900 font-medium">{edu.school}</p>
+              <p className="text-gray-400 text-sm">{edu.degree} — {edu.year}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      {cvData.skills?.length > 0 && (
+        <div>
+          <h3 className="text-gray-300 font-medium text-xs mb-4 uppercase tracking-widest">Beceriler</h3>
+          <div className="flex flex-wrap gap-2">
+            {cvData.skills.map((skill, i) => (
+              <span key={i} className="text-gray-600 text-sm px-3 py-1 border border-gray-200 rounded-full">{skill}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function CreateCV() {
   const [template, setTemplate] = useState('Modern')
   const [mode, setMode] = useState(null)
@@ -32,7 +198,7 @@ export default function CreateCV() {
     setLoading(false)
   }
 
- const handleDownloadPDF = () => {
+  const handleDownloadPDF = () => {
     window.print()
   }
 
@@ -51,65 +217,15 @@ export default function CreateCV() {
               </button>
               <button
                 onClick={handleDownloadPDF}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl flex items-center gap-2"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl"
               >
                 📄 PDF İndir
               </button>
             </div>
           </div>
-
-          <div id="cv-preview" className="bg-white rounded-2xl p-10 shadow-2xl">
-            <div className="border-b border-gray-200 pb-6 mb-6">
-              <h2 className="text-gray-900 text-3xl font-bold">{cvData.name}</h2>
-              <div className="flex gap-4 mt-2 text-gray-500 text-sm flex-wrap">
-                {cvData.email && <span>{cvData.email}</span>}
-                {cvData.phone && <span>{cvData.phone}</span>}
-                {cvData.location && <span>{cvData.location}</span>}
-              </div>
-              {cvData.summary && <p className="text-gray-600 mt-3 text-sm leading-relaxed">{cvData.summary}</p>}
-            </div>
-
-            {cvData.experience?.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-gray-900 font-bold text-lg mb-3">Deneyim</h3>
-                {cvData.experience.map((exp, i) => (
-                  <div key={i} className="mb-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-gray-900 font-medium">{exp.position}</p>
-                        <p className="text-gray-500 text-sm">{exp.company}</p>
-                      </div>
-                      <p className="text-gray-400 text-sm">{exp.duration}</p>
-                    </div>
-                    {exp.description && <p className="text-gray-600 text-sm mt-1">{exp.description}</p>}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {cvData.education?.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-gray-900 font-bold text-lg mb-3">Eğitim</h3>
-                {cvData.education.map((edu, i) => (
-                  <div key={i} className="mb-2">
-                    <p className="text-gray-900 font-medium">{edu.school}</p>
-                    <p className="text-gray-500 text-sm">{edu.degree} — {edu.year}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {cvData.skills?.length > 0 && (
-              <div>
-                <h3 className="text-gray-900 font-bold text-lg mb-3">Beceriler</h3>
-                <div className="flex flex-wrap gap-2">
-                  {cvData.skills.map((skill, i) => (
-                    <span key={i} className="bg-gray-100 text-gray-700 text-sm px-3 py-1 rounded-full">{skill}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          {template === 'Modern' && <ModernCV cvData={cvData} />}
+          {template === 'Klasik' && <KlasikCV cvData={cvData} />}
+          {template === 'Minimal' && <MinimalCV cvData={cvData} />}
         </div>
       </div>
     )
@@ -121,10 +237,8 @@ export default function CreateCV() {
         <button onClick={() => router.push('/dashboard')} className="text-gray-400 hover:text-white text-sm mb-8 flex items-center gap-2">
           ← Geri
         </button>
-
         <h1 className="text-white text-3xl font-bold mb-2">CV Oluştur</h1>
         <p className="text-gray-400 mb-8">Yapay zeka CV'ni saniyeler içinde hazırlasın</p>
-
         <div className="mb-8">
           <p className="text-gray-300 text-sm font-medium mb-3">Şablon Seç</p>
           <div className="flex gap-3">
@@ -139,7 +253,6 @@ export default function CreateCV() {
             ))}
           </div>
         </div>
-
         {!mode && (
           <div className="grid grid-cols-2 gap-4">
             <button
@@ -160,7 +273,6 @@ export default function CreateCV() {
             </button>
           </div>
         )}
-
         {mode && (
           <div>
             <div className="flex items-center justify-between mb-3">
