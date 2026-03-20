@@ -1,5 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
+
+const ADMIN_EMAIL = 'palaorhan30@gmail.com'
 import { supabase } from '../lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -201,15 +203,23 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-950">
       <div className="max-w-6xl mx-auto px-6 py-8">
 
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-white text-2xl font-bold">Resumind</h1>
-          <div className="flex items-center gap-4">
-            <p className="text-gray-400 text-sm">{user.email}</p>
-            <button onClick={handleLogout} className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-xl transition-all">
-              Çıkış Yap
-            </button>
-          </div>
-        </div>
+      <div className="flex items-center gap-4">
+  <p className="text-gray-400 text-sm">{user.email}</p>
+  {user.email === ADMIN_EMAIL && (
+    <button
+      onClick={() => router.push('/admin')}
+      className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-xl transition-all"
+    >
+      ⚙️ Admin
+    </button>
+  )}
+  <button
+    onClick={handleLogout}
+    className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-xl transition-all"
+  >
+    Çıkış Yap
+  </button>
+</div>
 
         <div className="flex gap-2 mb-8">
           <button
