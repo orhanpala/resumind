@@ -9,22 +9,56 @@ export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
   const router = useRouter()
 
   const handleSubmit = async () => {
     setLoading(true)
     setError('')
+    setSuccess(false)
 
     if (isRegister) {
-      const { error } = await supabase.auth.signUp({ email, password })
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: 'https://resumind.com.tr/dashboard'
+        }
+      })
       if (error) setError(error.message)
-      else router.push('/dashboard')
+      else setSuccess(true)
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setError(error.message)
+      if (error) {
+        if (error.message === 'Email not confirmed') {
+          setError('Email adresinizi doğrulamadınız. Lütfen emailinizi kontrol edin.')
+        } else {
+          setError('Email veya şifre hatalı.')
+        }
+      }
       else router.push('/dashboard')
     }
     setLoading(false)
+  }
+
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="bg-gray-900 p-8 rounded-2xl w-full max-w-md text-center">
+          <div className="text-5xl mb-4">📧</div>
+          <h2 className="text-white text-2xl font-bold mb-2">Emailinizi Kontrol Edin</h2>
+          <p className="text-gray-400 mb-6">
+            <span className="text-white font-medium">{email}</span> adresine doğrulama linki gönderdik. Linke tıklayarak hesabınızı aktif edin.
+          </p>
+          <button
+            onClick={() => { setSuccess(false); setIsRegister(false) }}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl transition-all"
+          >
+            Giriş Yap
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -57,7 +91,7 @@ export default function LoginPage() {
         />
         <input
           type="password"
-          placeholder="Şifre"
+          placeholder="Şifre (en az 6 karakter)"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 mb-4 outline-none focus:ring-2 focus:ring-blue-500"
