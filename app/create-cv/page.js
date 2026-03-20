@@ -32,21 +32,33 @@ export default function CreateCV() {
     setLoading(false)
   }
 
+ const handleDownloadPDF = () => {
+    window.print()
+  }
+
   if (cvData) {
     return (
       <div className="min-h-screen bg-gray-950 py-12">
         <div className="max-w-3xl mx-auto px-6">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-white text-2xl font-bold">CV Hazır! 🎉</h1>
-            <button
-              onClick={() => setCvData(null)}
-              className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-xl"
-            >
-              Yeniden Oluştur
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCvData(null)}
+                className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-xl"
+              >
+                Yeniden Oluştur
+              </button>
+              <button
+                onClick={handleDownloadPDF}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl flex items-center gap-2"
+              >
+                📄 PDF İndir
+              </button>
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-10 shadow-2xl">
+          <div id="cv-preview" className="bg-white rounded-2xl p-10 shadow-2xl">
             <div className="border-b border-gray-200 pb-6 mb-6">
               <h2 className="text-gray-900 text-3xl font-bold">{cvData.name}</h2>
               <div className="flex gap-4 mt-2 text-gray-500 text-sm flex-wrap">
