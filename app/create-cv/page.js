@@ -551,23 +551,70 @@ function CreateCVContent() {
             </button>
           </div>
         )}
-        {mode && (
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-gray-300 text-sm font-medium">{mode === 'upload' ? 'CV içeriğini buraya yapıştır' : 'Bilgilerini kaba taslak yaz'}</p>
-              <button onClick={() => setMode(null)} className="text-gray-500 hover:text-white text-sm">Geri</button>
+       {mode && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-gray-300 text-sm font-medium">
+                  {mode === 'upload' ? 'CV dosyasını yükle' : 'Bilgilerini yaz'}
+                </p>
+                <button onClick={() => setMode(null)} className="text-gray-500 hover:text-white text-xs">Geri</button>
+              </div>
+
+              {mode === 'upload' && (
+                <div className="mb-4">
+                  <label className="w-full border-2 border-dashed border-gray-700 hover:border-blue-500 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all bg-gray-900">
+                    <div className="text-3xl mb-2">📁</div>
+                    <p className="text-white text-sm font-medium mb-1">PDF veya Word dosyası seç</p>
+                    <p className="text-gray-500 text-xs">.pdf, .doc, .docx desteklenir</p>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files[0]
+                        if (!file) return
+                        const formData = new FormData()
+                        formData.append('file', file)
+                        try {
+                          const res = await fetch('/api/parse-cv', {
+                            method: 'POST',
+                            body: formData
+                          })
+                          const data = await res.json()
+                          if (data.success) setCvText(data.text)
+                          else alert('Dosya okunamadı: ' + data.error)
+                        } catch (err) {
+                          alert('Bir hata oluştu')
+                        }
+                      }}
+                    />
+                  </label>
+                  {cvText && (
+                    <div className="mt-3 bg-green-900 bg-opacity-30 border border-green-700 rounded-xl px-4 py-3">
+                      <p className="text-green-400 text-sm">✅ Dosya okundu! CV oluşturmaya hazır.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {mode === 'text' && (
+                <textarea
+                  value={cvText}
+                  onChange={(e) => setCvText(e.target.value)}
+                  placeholder="Örnek: Adım Ahmet, yazılım geliştirici olarak 3 yıl çalıştım, Python ve React biliyorum, İstanbul Üniversitesi mezunuyum..."
+                  className="w-full bg-gray-900 border border-gray-800 text-white rounded-xl px-4 py-3 h-72 outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm mb-3"
+                />
+              )}
+
+              <button
+                onClick={handleGenerate}
+                disabled={loading || !cvText}
+                className="w-full mt-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-3 rounded-xl transition-all"
+              >
+                {loading ? '✨ CV Oluşturuluyor...' : '✨ CV Oluştur'}
+              </button>
             </div>
-            <textarea
-              value={cvText}
-              onChange={(e) => setCvText(e.target.value)}
-              placeholder={mode === 'upload' ? 'CV içeriğini buraya kopyalayıp yapıştır...' : 'Örnek: Adım Ahmet, yazılım geliştirici olarak 3 yıl çalıştım...'}
-              className="w-full bg-gray-900 border border-gray-800 text-white rounded-2xl px-5 py-4 h-64 outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
-            />
-            <button onClick={handleGenerate} disabled={loading || !cvText} className="w-full mt-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-4 rounded-2xl transition-all text-lg">
-              {loading ? '✨ CV Oluşturuluyor...' : '✨ CV Oluştur'}
-            </button>
-          </div>
-        )}
+          )}
       </div>
     </div>
   )
