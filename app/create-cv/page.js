@@ -3,6 +3,7 @@ import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import { CVComponents, colorOptions } from '../components/CVTemplates'
+import LoadingAnimation from '../components/LoadingAnimation'
 
 const emptyCV = {
   name: '', email: '', phone: '', location: '', summary: '',
@@ -231,9 +232,19 @@ function CreateCVContent() {
               {mode === 'text' && (
                 <textarea value={cvText} onChange={(e) => setCvText(e.target.value)} placeholder="Örnek: Adım Ahmet, yazılım geliştirici olarak 3 yıl çalıştım..." className="w-full bg-gray-900 border border-gray-800 text-white rounded-xl px-4 py-3 h-72 outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm mb-3" />
               )}
-              <button onClick={handleGenerate} disabled={loading || !cvText} className="w-full mt-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-3 rounded-xl transition-all">
-                {loading ? '✨ CV Oluşturuluyor...' : '✨ CV Oluştur'}
-              </button>
+             {loading ? (
+                <div className="mt-3 bg-gray-900 border border-gray-800 rounded-2xl">
+                  <LoadingAnimation text="CV oluşturuluyor, lütfen bekleyin..." />
+                </div>
+              ) : (
+                <button
+                  onClick={handleGenerate}
+                  disabled={!cvText}
+                  className="w-full mt-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-3 rounded-xl transition-all"
+                >
+                  ✨ CV Oluştur
+                </button>
+              )}
             </div>
           )}
           {cvData && (
