@@ -20,14 +20,19 @@ export default function AnnouncementBar() {
   const [announcements, setAnnouncements] = useState([])
   const [dismissed, setDismissed] = useState([])
 
-  useEffect(() => {
+ useEffect(() => {
     const fetchAnnouncements = async () => {
       const { data } = await supabase
         .from('announcements')
         .select('*')
         .eq('active', true)
         .order('created_at', { ascending: false })
-      if (data) setAnnouncements(data)
+      if (data) {
+        setAnnouncements(data)
+        setTimeout(() => {
+          setDismissed(data.map(a => a.id))
+        }, 5000)
+      }
     }
     fetchAnnouncements()
   }, [])
