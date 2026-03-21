@@ -25,6 +25,12 @@ function CreateCVContent() {
   const [currentLang, setCurrentLang] = useState('tr')
   const [linkedinSummary, setLinkedinSummary] = useState(null)
   const [generatingLinkedin, setGeneratingLinkedin] = useState(false)
+  const [referenceLetter, setReferenceLetter] = useState(null)
+  const [generatingReference, setGeneratingReference] = useState(false)
+  const [showReferenceForm, setShowReferenceForm] = useState(false)
+  const [referenceInfo, setReferenceInfo] = useState({
+    refName: '', refPosition: '', refCompany: '', relationship: ''
+  })
   const router = useRouter()
 
   const CVComponent = CVComponents[template] || CVComponents.Modern
@@ -118,6 +124,28 @@ function CreateCVContent() {
       alert('Bir hata oluştu')
     }
     setGeneratingLinkedin(false)
+  }
+
+  const handleReferenceLetter = async () => {
+    if (!cvData || !referenceInfo.refName) return
+    setGeneratingReference(true)
+    try {
+      const response = await fetch('/api/reference-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cvData, referenceInfo })
+      })
+      const data = await response.json()
+      if (data.success) {
+        setReferenceLetter(data.letter)
+        setShowReferenceForm(false)
+      } else {
+        alert('Hata: ' + data.error)
+      }
+    } catch (error) {
+      alert('Bir hata oluştu')
+    }
+    setGeneratingReference(false)
   }
 
   return (
@@ -256,7 +284,7 @@ function CreateCVContent() {
             <div className="mt-4">
               <div className="flex gap-3 mb-2">
                 <button
-                  onClick={() => { setCvData(null); setPreviewData(emptyCV); setMode(null); setScoreData(null); setLinkedinSummary(null) }}
+                  onClick={() => { setCvData(null); setPreviewData(emptyCV); setMode(null); setScoreData(null); setLinkedinSummary(null); setReferenceLetter(null) }}
                   className="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-sm py-3 rounded-xl"
                 >
                   Yeniden Oluştur
@@ -297,10 +325,58 @@ function CreateCVContent() {
               <button
                 onClick={handleLinkedinSummary}
                 disabled={generatingLinkedin}
-                className="w-full bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all"
+                className="w-full mb-2 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all"
               >
                 {generatingLinkedin ? '⏳ Oluşturuluyor...' : '💼 LinkedIn Özeti Oluştur'}
               </button>
+
+              <button
+                onClick={() => setShowReferenceForm(!showReferenceForm)}
+                className="w-full mb-2 bg-orange-600 hover:bg-orange-700 text-white text-sm py-3 rounded-xl transition-all"
+              >
+                📝 Referans Mektubu Oluştur
+              </button>
+
+              {showReferenceForm && (
+                <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-2">
+                  <p className="text-white font-medium text-sm mb-3">Referans Veren Bilgileri</p>
+                  <input
+                    type="text"
+                    placeholder="Referansın adı soyadı"
+                    value={referenceInfo.refName}
+                    onChange={(e) => setReferenceInfo({...referenceInfo, refName: e.target.value})}
+                    className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Referansın pozisyonu (Müdür, Direktör vb.)"
+                    value={referenceInfo.refPosition}
+                    onChange={(e) => setReferenceInfo({...referenceInfo, refPosition: e.target.value})}
+                    className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Referansın şirketi"
+                    value={referenceInfo.refCompany}
+                    onChange={(e) => setReferenceInfo({...referenceInfo, refCompany: e.target.value})}
+                    className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                  />
+                  <input
+                    type="text"
+                    placeholder="İlişki (Eski müdürüm, İş arkadaşım vb.)"
+                    value={referenceInfo.relationship}
+                    onChange={(e) => setReferenceInfo({...referenceInfo, relationship: e.target.value})}
+                    className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-3 outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                  />
+                  <button
+                    onClick={handleReferenceLetter}
+                    disabled={generatingReference || !referenceInfo.refName}
+                    className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all"
+                  >
+                    {generatingReference ? '⏳ Oluşturuluyor...' : '📝 Mektubu Oluştur'}
+                  </button>
+                </div>
+              )}
 
               {/* Mobilde CV önizleme */}
               <div className="md:hidden rounded-xl overflow-auto mt-4">
@@ -362,6 +438,21 @@ function CreateCVContent() {
                     </button>
                   </div>
                   <p className="text-gray-300 text-sm leading-relaxed">{linkedinSummary}</p>
+                </div>
+              )}
+
+              {referenceLetter && (
+                <div className="mt-4 bg-gray-900 border border-orange-800 rounded-2xl p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-white font-bold">📝 Referans Mektubu</h3>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(referenceLetter)}
+                      className="text-orange-400 hover:text-orange-300 text-xs border border-orange-800 px-2 py-1 rounded-lg"
+                    >
+                      Kopyala
+                    </button>
+                  </div>
+                  <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">{referenceLetter}</p>
                 </div>
               )}
             </div>
