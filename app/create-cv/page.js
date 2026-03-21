@@ -25,6 +25,8 @@ function CreateCVContent() {
   const [currentLang, setCurrentLang] = useState('tr')
   const [linkedinSummary, setLinkedinSummary] = useState(null)
   const [generatingLinkedin, setGeneratingLinkedin] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [editData, setEditData] = useState(null)
   const [referenceLetter, setReferenceLetter] = useState(null)
   const [generatingReference, setGeneratingReference] = useState(false)
   const [showReferenceForm, setShowReferenceForm] = useState(false)
@@ -135,6 +137,11 @@ function CreateCVContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cvData, referenceInfo })
       })
+      const handleEditSave = () => {
+    setCvData(editData)
+    setPreviewData(editData)
+    setEditMode(false)
+  }
       const data = await response.json()
       if (data.success) {
         setReferenceLetter(data.letter)
@@ -296,6 +303,49 @@ function CreateCVContent() {
                   📄 PDF İndir
                 </button>
               </div>
+              <button
+                onClick={() => { setEditData({...cvData}); setEditMode(!editMode) }}
+                className="w-full mb-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm py-3 rounded-xl transition-all"
+              >
+                ✏️ CV'yi Düzenle
+              </button>
+
+              {editMode && editData && (
+                <div className="bg-gray-900 border border-yellow-700 rounded-2xl p-5 mb-2">
+                  <p className="text-white font-medium text-sm mb-3">CV Bilgilerini Düzenle</p>
+                  
+                  <input type="text" placeholder="Ad Soyad" value={editData.name || ''} onChange={(e) => setEditData({...editData, name: e.target.value})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-yellow-500 text-sm" />
+                  <input type="text" placeholder="Email" value={editData.email || ''} onChange={(e) => setEditData({...editData, email: e.target.value})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-yellow-500 text-sm" />
+                  <input type="text" placeholder="Telefon" value={editData.phone || ''} onChange={(e) => setEditData({...editData, phone: e.target.value})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-yellow-500 text-sm" />
+                  <input type="text" placeholder="Şehir" value={editData.location || ''} onChange={(e) => setEditData({...editData, location: e.target.value})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-yellow-500 text-sm" />
+                  <textarea placeholder="Hakkımda" value={editData.summary || ''} onChange={(e) => setEditData({...editData, summary: e.target.value})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-yellow-500 text-sm h-20 resize-none" />
+                  
+                  <p className="text-gray-400 text-xs mb-2">Beceriler (virgülle ayır)</p>
+                  <input type="text" placeholder="Python, React, Node.js" value={editData.skills?.join(', ') || ''} onChange={(e) => setEditData({...editData, skills: e.target.value.split(',').map(s => s.trim()).filter(s => s)})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-3 outline-none focus:ring-2 focus:ring-yellow-500 text-sm" />
+
+                  {editData.experience?.map((exp, i) => (
+                    <div key={i} className="bg-gray-800 rounded-xl p-3 mb-2">
+                      <p className="text-yellow-400 text-xs mb-2">Deneyim {i + 1}</p>
+                      <input type="text" placeholder="Pozisyon" value={exp.position || ''} onChange={(e) => { const newExp = [...editData.experience]; newExp[i] = {...newExp[i], position: e.target.value}; setEditData({...editData, experience: newExp}) }} className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 mb-1 outline-none text-xs" />
+                      <input type="text" placeholder="Şirket" value={exp.company || ''} onChange={(e) => { const newExp = [...editData.experience]; newExp[i] = {...newExp[i], company: e.target.value}; setEditData({...editData, experience: newExp}) }} className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 mb-1 outline-none text-xs" />
+                      <input type="text" placeholder="Süre" value={exp.duration || ''} onChange={(e) => { const newExp = [...editData.experience]; newExp[i] = {...newExp[i], duration: e.target.value}; setEditData({...editData, experience: newExp}) }} className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 outline-none text-xs" />
+                    </div>
+                  ))}
+
+                  {editData.education?.map((edu, i) => (
+                    <div key={i} className="bg-gray-800 rounded-xl p-3 mb-2">
+                      <p className="text-yellow-400 text-xs mb-2">Eğitim {i + 1}</p>
+                      <input type="text" placeholder="Okul" value={edu.school || ''} onChange={(e) => { const newEdu = [...editData.education]; newEdu[i] = {...newEdu[i], school: e.target.value}; setEditData({...editData, education: newEdu}) }} className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 mb-1 outline-none text-xs" />
+                      <input type="text" placeholder="Bölüm" value={edu.degree || ''} onChange={(e) => { const newEdu = [...editData.education]; newEdu[i] = {...newEdu[i], degree: e.target.value}; setEditData({...editData, education: newEdu}) }} className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 mb-1 outline-none text-xs" />
+                      <input type="text" placeholder="Yıl" value={edu.year || ''} onChange={(e) => { const newEdu = [...editData.education]; newEdu[i] = {...newEdu[i], year: e.target.value}; setEditData({...editData, education: newEdu}) }} className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 outline-none text-xs" />
+                    </div>
+                  ))}
+
+                  <button onClick={handleEditSave} className="w-full bg-yellow-600 hover:bg-yellow-700 text-white text-sm py-3 rounded-xl mt-2 transition-all">
+                    ✅ Değişiklikleri Kaydet
+                  </button>
+                </div>
+              )}
 
               <button
                 onClick={handleScoreCV}
