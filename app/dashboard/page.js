@@ -159,6 +159,95 @@ const templates = [
       </div>
     )
   }
+  ,{
+    id: 'Timeline', name: 'Timeline', desc: 'Kronolojik zaman çizgisi',
+    preview: (
+      <div className="w-full h-full bg-white rounded-lg overflow-hidden">
+        <div className="bg-gray-900 p-2 flex items-center gap-2">
+          <div className="w-5 h-5 bg-orange-500 rounded-full"></div>
+          <div className="h-2 bg-white bg-opacity-80 rounded w-2/3"></div>
+        </div>
+        <div className="p-2">
+          <div className="relative pl-4">
+            <div className="absolute left-1 top-0 bottom-0 w-0.5 bg-orange-200"></div>
+            <div className="h-1 bg-gray-200 rounded w-full mb-2"></div>
+            <div className="h-1 bg-gray-200 rounded w-5/6 mb-2"></div>
+            <div className="h-1 bg-gray-200 rounded w-4/6"></div>
+          </div>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'Sidebar', name: 'Sidebar', desc: 'Koyu panel, modern',
+    preview: (
+      <div className="w-full h-full bg-white rounded-lg overflow-hidden flex">
+        <div className="bg-slate-800 w-2/5 p-1">
+          <div className="w-5 h-5 bg-teal-500 rounded-full mx-auto mb-1"></div>
+          <div className="h-1 bg-slate-400 rounded w-full mb-1"></div>
+          <div className="h-1 bg-teal-500 rounded w-3/4 mb-2"></div>
+          <div className="h-1 bg-slate-600 rounded w-full mb-1"></div>
+          <div className="h-1 bg-slate-600 rounded w-4/5"></div>
+        </div>
+        <div className="flex-1 p-1">
+          <div className="h-1 bg-teal-500 rounded w-1/2 mb-1"></div>
+          <div className="h-1 bg-gray-200 rounded w-full mb-1"></div>
+          <div className="h-1 bg-gray-200 rounded w-5/6 mb-2"></div>
+          <div className="h-1 bg-teal-500 rounded w-1/2 mb-1"></div>
+          <div className="h-1 bg-gray-200 rounded w-full"></div>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'Bant', name: 'Bant', desc: 'Renkli üst şerit',
+    preview: (
+      <div className="w-full h-full bg-white rounded-lg overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-rose-500 to-pink-400"></div>
+        <div className="p-2 flex items-center gap-2 border-b border-gray-100">
+          <div className="w-5 h-5 bg-rose-100 rounded-full border border-rose-200"></div>
+          <div>
+            <div className="h-2 bg-gray-800 rounded w-20 mb-0.5"></div>
+            <div className="h-1 bg-rose-400 rounded w-12"></div>
+          </div>
+        </div>
+        <div className="p-2">
+          <div className="h-1 bg-rose-400 rounded w-1/4 mb-1"></div>
+          <div className="h-1 bg-gray-200 rounded w-full mb-1"></div>
+          <div className="h-1 bg-gray-200 rounded w-5/6"></div>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'Kartlı', name: 'Kartlı', desc: 'Kart bazlı düzen',
+    preview: (
+      <div className="w-full h-full bg-gray-100 rounded-lg p-1">
+        <div className="bg-white rounded p-1 mb-1 flex items-center gap-1">
+          <div className="w-5 h-5 bg-indigo-600 rounded"></div>
+          <div>
+            <div className="h-1.5 bg-gray-800 rounded w-16 mb-0.5"></div>
+            <div className="h-1 bg-indigo-400 rounded w-10"></div>
+          </div>
+        </div>
+        <div className="bg-white rounded p-1 mb-1">
+          <div className="h-1 bg-indigo-400 rounded w-1/3 mb-1"></div>
+          <div className="h-1 bg-gray-200 rounded w-full mb-0.5"></div>
+          <div className="h-1 bg-gray-200 rounded w-4/5"></div>
+        </div>
+        <div className="grid grid-cols-2 gap-1">
+          <div className="bg-white rounded p-1">
+            <div className="h-1 bg-indigo-400 rounded w-2/3 mb-1"></div>
+            <div className="h-1 bg-gray-200 rounded w-full"></div>
+          </div>
+          <div className="bg-white rounded p-1">
+            <div className="h-1 bg-indigo-400 rounded w-2/3 mb-1"></div>
+            <div className="h-1 bg-gray-200 rounded w-full"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 ]
 
 export default function Dashboard() {
