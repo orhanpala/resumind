@@ -65,7 +65,7 @@ export default function Navbar({ user }) {
 
           <button onClick={() => router.push(user ? '/dashboard' : '/login')} className="text-gray-400 hover:text-white text-sm transition-all">CV Şablonları</button>
           <button className="text-gray-400 hover:text-white text-sm transition-all">Ücretlendirme</button>
-          <button className="text-gray-400 hover:text-white text-sm transition-all">İletişim</button>
+         <button onClick={() => router.push('/iletisim')} className="text-gray-400 hover:text-white text-sm transition-all">İletişim</button>
         </div>
 
         <div className="flex items-center gap-3">
