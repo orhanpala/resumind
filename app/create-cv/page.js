@@ -19,6 +19,8 @@ function CreateCVContent() {
   const [loading, setLoading] = useState(false)
   const [cvData, setCvData] = useState(null)
   const [previewData, setPreviewData] = useState(emptyCV)
+  const [scoreData, setScoreData] = useState(null)
+  const [scoring, setScoring] = useState(false)
   const router = useRouter()
 
   const CVComponent = CVComponents[template] || CVComponents.Modern
@@ -54,6 +56,23 @@ function CreateCVContent() {
   }
 
   const handleDownloadPDF = () => window.print()
+  const handleScoreCV = async () => {
+    if (!cvData) return
+    setScoring(true)
+    try {
+      const response = await fetch('/api/score-cv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cvData })
+      })
+      const data = await response.json()
+      if (data.success) setScoreData(data.scoreData)
+      else alert('Hata: ' + data.error)
+    } catch (error) {
+      alert('Bir hata oluştu')
+    }
+    setScoring(false)
+  }
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -202,6 +221,55 @@ function CreateCVContent() {
                 >
                   📄 PDF İndir
                 </button>
+                {scoreData && (
+            <div className="mt-4 bg-gray-900 border border-gray-800 rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-white font-bold text-lg">CV Puanı</h3>
+                <div className="flex items-center gap-2">
+                  <div className={`text-3xl font-bold ${scoreData.toplam_puan >= 80 ? 'text-green-400' : scoreData.toplam_puan >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                    {scoreData.toplam_puan}
+                  </div>
+                  <span className="text-gray-400 text-sm">/100</span>
+                </div>
+              </div>
+              <div className="space-y-2 mb-4">
+                {Object.entries(scoreData.kategoriler).map(([key, val]) => (
+                  <div key={key}>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-gray-300 text-xs capitalize">{key}</span>
+                      <span className="text-gray-400 text-xs">{val.puan}/100</span>
+                    </div>
+                    <div className="w-full bg-gray-800 rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full ${val.puan >= 80 ? 'bg-green-500' : val.puan >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                        style={{ width: `${val.puan}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mb-3">
+                <p className="text-green-400 text-xs font-medium mb-1">💪 Güçlü Yönler</p>
+                {scoreData.güçlü_yönler.map((item, i) => (
+                  <p key={i} className="text-gray-400 text-xs">• {item}</p>
+                ))}
+              </div>
+              <div className="mb-3">
+                <p className="text-yellow-400 text-xs font-medium mb-1">🔧 İyileştirme Önerileri</p>
+                {scoreData.iyileştirme_önerileri.map((item, i) => (
+                  <p key={i} className="text-gray-400 text-xs">• {item}</p>
+                ))}
+              </div>
+              <p className="text-gray-500 text-xs italic">{scoreData.genel_yorum}</p>
+            </div>
+          )}
+                <button
+                onClick={handleScoreCV}
+                disabled={scoring}
+                className="w-full mt-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all"
+              >
+                {scoring ? '🔍 Puanlanıyor...' : '⭐ CV\'yi Puanla'}
+              </button>
               </div>
               {/* Mobilde CV önizleme */}
               <div className="md:hidden rounded-xl overflow-auto">
