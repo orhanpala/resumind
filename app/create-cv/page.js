@@ -188,19 +188,25 @@ function CreateCVContent() {
           )}
 
           {cvData && (
-            <div className="mt-4 flex gap-3">
-              <button
-                onClick={() => { setCvData(null); setPreviewData(emptyCV); setMode(null) }}
-                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-sm py-3 rounded-xl"
-              >
-                Yeniden Oluştur
-              </button>
-              <button
-                onClick={handleDownloadPDF}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-3 rounded-xl"
-              >
-                📄 PDF İndir
-              </button>
+            <div className="mt-4">
+              <div className="flex gap-3 mb-4">
+                <button
+                  onClick={() => { setCvData(null); setPreviewData(emptyCV); setMode(null) }}
+                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-sm py-3 rounded-xl"
+                >
+                  Yeniden Oluştur
+                </button>
+                <button
+                  onClick={handleDownloadPDF}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-3 rounded-xl"
+                >
+                  📄 PDF İndir
+                </button>
+              </div>
+              {/* Mobilde CV önizleme */}
+              <div className="md:hidden rounded-xl overflow-auto">
+                <CVComponent cvData={cvData} color={color} />
+              </div>
             </div>
           )}
         </div>
