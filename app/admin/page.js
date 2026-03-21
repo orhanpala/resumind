@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRouter } from 'next/navigation'
 
-const ADMIN_EMAIL = 'palaorhan40@gmail.com'
+const ADMIN_EMAIL = 'palaorhan30@gmail.com'
 
 export default function AdminPage() {
   const [user, setUser] = useState(null)
