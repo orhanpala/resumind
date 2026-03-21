@@ -138,8 +138,9 @@ function CreateCVContent() {
         body: JSON.stringify({ cvData, referenceInfo })
       })
       const handleEditSave = () => {
-    setCvData(editData)
-    setPreviewData(editData)
+    const newData = {...editData}
+    setCvData(newData)
+    setPreviewData(newData)
     setEditMode(false)
   }
       const data = await response.json()
@@ -516,7 +517,7 @@ function CreateCVContent() {
             <span className="text-xs bg-blue-600 bg-opacity-20 text-blue-400 px-2 py-1 rounded-full border border-blue-600 border-opacity-30">{template}</span>
           </div>
           <div className="flex-1 overflow-auto rounded-xl">
-            <CVComponent cvData={previewData} color={color} />
+            <CVComponent cvData={cvData || previewData} color={color} />
           </div>
         </div>
 
