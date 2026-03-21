@@ -167,20 +167,21 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('templates')
   const router = useRouter()
 
-  useEffect(() => {
+useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) router.push('/login')
-      else {
-        setUser(user)
-        const { data } = await supabase
-          .from('cvs')
-          .select('*')
-          .order('created_at', { ascending: false })
-        if (data) setPastCVs(data)
-      }
+      else setUser(user)
     }
     getUser()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        setUser(session.user)
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   const handleLogout = async () => {

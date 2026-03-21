@@ -1,5 +1,7 @@
 'use client'
 import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+import { supabase } from './lib/supabase'
 
 const templates = [
   {
@@ -126,8 +128,21 @@ const templates = [
   }
 ]
 
-export default function Home() {
-  const router = useRouter()
+useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) router.push('/dashboard')
+    }
+    checkUser()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        router.push('/dashboard')
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-950">
