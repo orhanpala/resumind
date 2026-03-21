@@ -115,8 +115,23 @@ export default function AdminPage() {
   const handleSendEmail = async () => {
     if (!emailForm.subject || !emailForm.message) return
     setSendingEmail(true)
-    alert(`Email gönderildi! Konu: ${emailForm.subject} — ${emailForm.target === 'all' ? 'Tüm kullanıcılar' : 'Seçili kullanıcılar'}`)
-    setEmailForm({ subject: '', message: '', target: 'all' })
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify(emailForm)
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert(`✅ Email gönderildi! ${data.successCount}/${data.total} başarılı`)
+        setEmailForm({ subject: '', message: '', target: 'all' })
+      } else {
+        alert('Hata: ' + data.error)
+      }
+    } catch (error) {
+      alert('Bir hata oluştu')
+    }
     setSendingEmail(false)
   }
 
