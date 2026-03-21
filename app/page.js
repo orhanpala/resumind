@@ -134,7 +134,7 @@ export default function Home() {
 
       {/* Navbar */}
       <nav className="flex items-center justify-between px-8 py-5 border-b border-gray-800">
-        <h1 className="text-white text-xl font-bold">Resumind</h1>
+       <h1 onClick={() => router.push('/')} className="text-white text-xl font-bold cursor-pointer hover:text-blue-400 transition-all">Resumind</h1>
         <div className="flex items-center gap-4">
           <button onClick={() => router.push('/login')} className="text-gray-400 hover:text-white text-sm transition-all">
             Giriş Yap

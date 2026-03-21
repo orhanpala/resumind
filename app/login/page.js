@@ -73,7 +73,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center">
       <div className="bg-gray-900 p-8 rounded-2xl w-full max-w-md">
-        <h1 className="text-white text-3xl font-bold mb-2">Resumind</h1>
+        <h1 onClick={() => router.push('/')} className="text-white text-3xl font-bold mb-2 cursor-pointer hover:text-blue-400 transition-all">Resumind</h1>
         <p className="text-gray-400 mb-8">Yapay zeka ile CV oluştur</p>
 
         <button
