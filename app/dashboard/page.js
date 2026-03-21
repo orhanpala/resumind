@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from './lib/supabase'
+import { supabase } from '../lib/supabase'
 
 const templates = [
   { id: 'Modern', name: 'Modern', desc: 'Mavi başlık', preview: (<div className="w-full h-full bg-white rounded-lg overflow-hidden"><div className="bg-blue-600 p-2"><div className="h-2 bg-white bg-opacity-80 rounded w-3/4 mb-1"></div><div className="h-1 bg-blue-300 rounded w-1/2"></div></div><div className="p-2"><div className="h-1 bg-blue-600 rounded w-1/3 mb-2"></div><div className="h-1 bg-gray-200 rounded w-full mb-1"></div><div className="h-1 bg-gray-200 rounded w-5/6"></div></div></div>) },
