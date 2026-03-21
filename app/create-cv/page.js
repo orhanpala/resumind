@@ -3,11 +3,11 @@ import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import { CVComponents, colorOptions } from '../components/CVTemplates'
-import { Suspense } from 'react'
 
-
-
-
+const emptyCV = {
+  name: '', email: '', phone: '', location: '', summary: '',
+  experience: [], education: [], skills: []
+}
 
 function CreateCVContent() {
   const searchParams = useSearchParams()
@@ -18,7 +18,10 @@ function CreateCVContent() {
   const [cvText, setCvText] = useState('')
   const [loading, setLoading] = useState(false)
   const [cvData, setCvData] = useState(null)
+  const [previewData, setPreviewData] = useState(emptyCV)
   const router = useRouter()
+
+  const CVComponent = CVComponents[template] || CVComponents.Modern
 
   const handleGenerate = async () => {
     if (!cvText) return
@@ -32,11 +35,12 @@ function CreateCVContent() {
       const data = await response.json()
       if (data.success) {
         setCvData(data.cvData)
+        setPreviewData(data.cvData)
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
           await supabase.from('cvs').insert({
             user_id: user.id,
-            template: template,
+            template,
             cv_data: data.cvData
           })
         }
@@ -51,55 +55,74 @@ function CreateCVContent() {
 
   const handleDownloadPDF = () => window.print()
 
-  const CVComponent = CVComponents[template] || CVComponents.Modern
-  
+  return (
+    <div className="min-h-screen bg-gray-950">
+      <div className="flex h-screen">
 
-  if (cvData) {
-    return (
-      <div className="min-h-screen bg-gray-950 py-12">
-        <div className="max-w-3xl mx-auto px-6">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-white text-2xl font-bold">CV Hazır! 🎉</h1>
-            <div className="flex gap-3">
-              <button onClick={() => setCvData(null)} className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-xl">Yeniden Oluştur</button>
-              <button onClick={handleDownloadPDF} className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl">📄 PDF İndir</button>
+        {/* Sol Panel - Form */}
+        <div className="w-full md:w-1/2 bg-gray-950 overflow-y-auto p-8 border-r border-gray-800">
+          <button onClick={() => router.push('/dashboard')} className="text-gray-400 hover:text-white text-sm mb-6 flex items-center gap-2">
+            ← Geri
+          </button>
+
+          <h1 className="text-white text-2xl font-bold mb-1">CV Oluştur</h1>
+          <p className="text-gray-400 text-sm mb-6">Yapay zeka CV'ni saniyeler içinde hazırlasın</p>
+
+          {/* Şablon Seç */}
+          <div className="mb-4">
+            <p className="text-gray-300 text-sm font-medium mb-3">Şablon</p>
+            <div className="flex flex-wrap gap-2">
+              {Object.keys(CVComponents).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTemplate(t)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${template === t ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+                >
+                  {t}
+                </button>
+              ))}
             </div>
           </div>
-          <CVComponent cvData={previewData} color={color} />
-        </div>
-      </div>
-    )
-  }
 
-  return (
-    <div className="min-h-screen bg-gray-950 py-12">
-      <div className="max-w-3xl mx-auto px-6">
-        <button onClick={() => router.push('/dashboard')} className="text-gray-400 hover:text-white text-sm mb-8 flex items-center gap-2">← Geri</button>
-        <h1 className="text-white text-3xl font-bold mb-2">CV Oluştur</h1>
-        <p className="text-gray-400 mb-8">Yapay zeka CV'ni saniyeler içinde hazırlasın</p>
-        <div className="mb-8">
-          <p className="text-gray-300 text-sm font-medium mb-3">Şablon: <span className="text-blue-400">{template}</span></p>
-          <div className="flex flex-wrap gap-2">
-            {Object.keys(CVComponents).map((t) => (
-              <button key={t} onClick={() => setTemplate(t)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${template === t ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>{t}</button>
-            ))}
+          {/* Renk Seç */}
+          <div className="mb-6">
+            <p className="text-gray-300 text-sm font-medium mb-3">Renk</p>
+            <div className="flex gap-2">
+              {colorOptions.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setColor(c.id)}
+                  title={c.label}
+                  className={`w-7 h-7 rounded-full border-2 transition-all ${color === c.id ? 'border-white scale-110' : 'border-transparent'}`}
+                  style={{ backgroundColor: c.hex }}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-        {!mode && (
-          <div className="grid grid-cols-2 gap-4">
-            <button onClick={() => setMode('upload')} className="bg-gray-900 border border-gray-800 hover:border-blue-500 rounded-2xl p-8 text-left transition-all">
-              <div className="text-3xl mb-3">📄</div>
-              <h3 className="text-white font-medium text-lg mb-1">CV Yükle</h3>
-              <p className="text-gray-400 text-sm">Mevcut CV'ni yapıştır, yapay zeka dönüştürsün</p>
-            </button>
-            <button onClick={() => setMode('text')} className="bg-gray-900 border border-gray-800 hover:border-blue-500 rounded-2xl p-8 text-left transition-all">
-              <div className="text-3xl mb-3">✏️</div>
-              <h3 className="text-white font-medium text-lg mb-1">Bilgileri Yaz</h3>
-              <p className="text-gray-400 text-sm">CV bilgilerini yaz, yapay zeka tamamlasın</p>
-            </button>
-          </div>
-        )}
-       {mode && (
+
+          {/* Mod Seç */}
+          {!mode && (
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <button
+                onClick={() => setMode('upload')}
+                className="bg-gray-900 border border-gray-800 hover:border-blue-500 rounded-xl p-5 text-left transition-all"
+              >
+                <div className="text-2xl mb-2">📄</div>
+                <h3 className="text-white font-medium mb-1 text-sm">CV Yükle</h3>
+                <p className="text-gray-400 text-xs">PDF veya Word dosyası yükle</p>
+              </button>
+              <button
+                onClick={() => setMode('text')}
+                className="bg-gray-900 border border-gray-800 hover:border-blue-500 rounded-xl p-5 text-left transition-all"
+              >
+                <div className="text-2xl mb-2">✏️</div>
+                <h3 className="text-white font-medium mb-1 text-sm">Bilgileri Yaz</h3>
+                <p className="text-gray-400 text-xs">Kaba taslak yaz, AI tamamlasın</p>
+              </button>
+            </div>
+          )}
+
+          {mode && (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-gray-300 text-sm font-medium">
@@ -163,6 +186,36 @@ function CreateCVContent() {
               </button>
             </div>
           )}
+
+          {cvData && (
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={() => { setCvData(null); setPreviewData(emptyCV); setMode(null) }}
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-sm py-3 rounded-xl"
+              >
+                Yeniden Oluştur
+              </button>
+              <button
+                onClick={handleDownloadPDF}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-3 rounded-xl"
+              >
+                📄 PDF İndir
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Sağ Panel - Canlı Önizleme */}
+        <div className="hidden md:flex w-1/2 bg-gray-900 p-8 flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-gray-400 text-sm font-medium">Canlı Önizleme</p>
+            <span className="text-xs bg-blue-600 bg-opacity-20 text-blue-400 px-2 py-1 rounded-full border border-blue-600 border-opacity-30">{template}</span>
+          </div>
+          <div className="flex-1 overflow-auto rounded-xl">
+            <CVComponent cvData={previewData} color={color} />
+          </div>
+        </div>
+
       </div>
     </div>
   )
