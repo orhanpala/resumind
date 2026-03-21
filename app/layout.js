@@ -1,9 +1,6 @@
-'use client'
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
-import Navbar from "./components/Navbar"
-import { useEffect, useState } from "react"
-import { supabase } from "./lib/supabase"
+import NavbarWrapper from "./components/NavbarWrapper"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,27 +12,37 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 })
 
+export const metadata = {
+  title: "Resumind - Yapay Zeka ile CV Oluştur",
+  description: "Yapay zeka ile saniyeler içinde profesyonel CV oluştur. 12 şablon, PDF indirme, LinkedIn özeti, referans mektubu ve daha fazlası.",
+  keywords: "cv oluştur, özgeçmiş oluştur, yapay zeka cv, ai cv, profesyonel cv, cv şablonu",
+  openGraph: {
+    title: "Resumind - Yapay Zeka ile CV Oluştur",
+    description: "Yapay zeka ile saniyeler içinde profesyonel CV oluştur.",
+    url: "https://www.resumind.com.tr",
+    siteName: "Resumind",
+    locale: "tr_TR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Resumind - Yapay Zeka ile CV Oluştur",
+    description: "Yapay zeka ile saniyeler içinde profesyonel CV oluştur.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  alternates: {
+    canonical: "https://www.resumind.com.tr",
+  },
+}
+
 export default function RootLayout({ children }) {
-  const [user, setUser] = useState(null)
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-    }
-    getUser()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
   return (
     <html lang="tr" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <Navbar user={user} />
+        <NavbarWrapper />
         {children}
       </body>
     </html>
