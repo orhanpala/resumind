@@ -20,7 +20,7 @@ export default function AnnouncementBar() {
   const [announcements, setAnnouncements] = useState([])
   const [dismissed, setDismissed] = useState([])
 
- useEffect(() => {
+   useEffect(() => {
     const fetchAnnouncements = async () => {
       const { data } = await supabase
         .from('announcements')
@@ -35,6 +35,15 @@ export default function AnnouncementBar() {
       }
     }
     fetchAnnouncements()
+
+    const channel = supabase
+      .channel('announcements')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, () => {
+        fetchAnnouncements()
+      })
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
   }, [])
 
   const visible = announcements.filter(a => !dismissed.includes(a.id))
