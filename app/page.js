@@ -1,6 +1,6 @@
 'use client'
-import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from './lib/supabase'
 
 const templates = [
@@ -128,7 +128,10 @@ const templates = [
   }
 ]
 
-useEffect(() => {
+export default function Home() {
+  const router = useRouter()
+
+  useEffect(() => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) router.push('/dashboard')
@@ -149,14 +152,10 @@ useEffect(() => {
 
       {/* Navbar */}
       <nav className="flex items-center justify-between px-8 py-5 border-b border-gray-800">
-       <h1 onClick={() => router.push('/')} className="text-white text-xl font-bold cursor-pointer hover:text-blue-400 transition-all">Resumind</h1>
+        <h1 onClick={() => router.push('/')} className="text-white text-xl font-bold cursor-pointer hover:text-blue-400 transition-all">Resumind</h1>
         <div className="flex items-center gap-4">
-          <button onClick={() => router.push('/login')} className="text-gray-400 hover:text-white text-sm transition-all">
-            Giriş Yap
-          </button>
-          <button onClick={() => router.push('/login')} className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl transition-all">
-            Ücretsiz Başla
-          </button>
+          <button onClick={() => router.push('/login')} className="text-gray-400 hover:text-white text-sm transition-all">Giriş Yap</button>
+          <button onClick={() => router.push('/login')} className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl transition-all">Ücretsiz Başla</button>
         </div>
       </nav>
 
@@ -173,16 +172,11 @@ useEffect(() => {
           Yapay zeka CV'ni otomatik oluşturur, düzenler ve 8 profesyonel şablona uyarlar. Bilgilerini yaz veya mevcut CV'ni yükle, gerisini biz halledelim.
         </p>
         <div className="flex items-center justify-center gap-4 flex-wrap">
-          <button
-            onClick={() => router.push('/login')}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-8 py-4 rounded-2xl transition-all text-lg"
-          >
+          <button onClick={() => router.push('/login')} className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-8 py-4 rounded-2xl transition-all text-lg">
             Hemen Dene — Ücretsiz
           </button>
           <p className="text-gray-500 text-sm">Kredi kartı gerekmez</p>
         </div>
-
-        {/* İstatistikler */}
         <div className="flex items-center justify-center gap-12 mt-16 flex-wrap">
           {[
             { number: '8', label: 'Profesyonel Şablon' },
@@ -203,11 +197,7 @@ useEffect(() => {
         <p className="text-gray-400 text-center mb-12">Her sektöre uygun tasarımlar</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {templates.map((template) => (
-            <div
-              key={template.id}
-              onClick={() => router.push('/login')}
-              className="bg-gray-900 border border-gray-800 hover:border-blue-500 rounded-2xl p-3 cursor-pointer transition-all group"
-            >
+            <div key={template.id} onClick={() => router.push('/login')} className="bg-gray-900 border border-gray-800 hover:border-blue-500 rounded-2xl p-3 cursor-pointer transition-all group">
               <div className="w-full h-28 bg-gray-800 rounded-xl mb-3 overflow-hidden group-hover:ring-2 group-hover:ring-blue-500 transition-all">
                 {template.preview}
               </div>
@@ -251,9 +241,7 @@ useEffect(() => {
             { step: '3', title: 'İndir', desc: 'Yapay zekanın oluşturduğu CV\'yi PDF olarak indir' }
           ].map((item, i) => (
             <div key={i} className="text-center">
-              <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg mx-auto mb-4">
-                {item.step}
-              </div>
+              <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg mx-auto mb-4">{item.step}</div>
               <h3 className="text-white font-semibold text-lg mb-2">{item.title}</h3>
               <p className="text-gray-400 text-sm">{item.desc}</p>
             </div>
@@ -266,10 +254,7 @@ useEffect(() => {
         <div className="bg-blue-600 rounded-3xl p-12 text-center">
           <h2 className="text-white text-3xl font-bold mb-4">Hemen başla, ücretsiz dene</h2>
           <p className="text-blue-100 mb-8">Yapay zeka ile dakikalar içinde profesyonel CV'ni oluştur</p>
-          <button
-            onClick={() => router.push('/login')}
-            className="bg-white text-blue-600 font-semibold px-8 py-4 rounded-2xl hover:bg-blue-50 transition-all text-lg"
-          >
+          <button onClick={() => router.push('/login')} className="bg-white text-blue-600 font-semibold px-8 py-4 rounded-2xl hover:bg-blue-50 transition-all text-lg">
             Ücretsiz CV Oluştur
           </button>
         </div>
@@ -277,7 +262,7 @@ useEffect(() => {
 
       {/* Footer */}
       <footer className="border-t border-gray-800 px-8 py-6 text-center">
-        <p className="text-gray-500 text-sm">© 2026 Resumind. Tüm hakları saklıdır.   Geliştirici Orhan Pala</p>
+        <p className="text-gray-500 text-sm">© 2025 Resumind. Tüm hakları saklıdır.</p>
       </footer>
 
     </div>
