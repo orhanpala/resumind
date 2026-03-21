@@ -21,6 +21,8 @@ function CreateCVContent() {
   const [previewData, setPreviewData] = useState(emptyCV)
   const [scoreData, setScoreData] = useState(null)
   const [scoring, setScoring] = useState(false)
+  const [translating, setTranslating] = useState(false)
+  const [currentLang, setCurrentLang] = useState('tr')
   const router = useRouter()
 
   const CVComponent = CVComponents[template] || CVComponents.Modern
@@ -56,6 +58,28 @@ function CreateCVContent() {
   }
 
   const handleDownloadPDF = () => window.print()
+  const handleTranslate = async (lang) => {
+    if (!cvData) return
+    setTranslating(true)
+    try {
+      const response = await fetch('/api/translate-cv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cvData, targetLanguage: lang === 'en' ? 'İngilizce' : 'Türkçe' })
+      })
+      const data = await response.json()
+      if (data.success) {
+        setCvData(data.translatedCV)
+        setPreviewData(data.translatedCV)
+        setCurrentLang(lang)
+      } else {
+        alert('Hata: ' + data.error)
+      }
+    } catch (error) {
+      alert('Bir hata oluştu')
+    }
+    setTranslating(false)
+  }
   const handleScoreCV = async () => {
     if (!cvData) return
     setScoring(true)
@@ -270,6 +294,22 @@ function CreateCVContent() {
               >
                 {scoring ? '🔍 Puanlanıyor...' : '⭐ CV\'yi Puanla'}
               </button>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => handleTranslate('en')}
+                  disabled={translating || currentLang === 'en'}
+                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all"
+                >
+                  {translating && currentLang !== 'en' ? '🌍 Çevriliyor...' : '🇬🇧 İngilizceye Çevir'}
+                </button>
+                <button
+                  onClick={() => handleTranslate('tr')}
+                  disabled={translating || currentLang === 'tr'}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all"
+                >
+                  {translating && currentLang === 'en' ? '🌍 Çevriliyor...' : '🇹🇷 Türkçeye Çevir'}
+                </button>
+              </div>
               </div>
               {/* Mobilde CV önizleme */}
               <div className="md:hidden rounded-xl overflow-auto">
