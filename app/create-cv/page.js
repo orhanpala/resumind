@@ -233,7 +233,7 @@ function CreateCVContent() {
                 </div>
               </div>
               <div className="space-y-2 mb-4">
-                {Object.entries(scoreData.kategoriler).map(([key, val]) => (
+                {scoreData.kategoriler && Object.entries(scoreData.kategoriler).map(([key, val]) => (
                   <div key={key}>
                     <div className="flex justify-between mb-1">
                       <span className="text-gray-300 text-xs capitalize">{key}</span>
@@ -250,13 +250,13 @@ function CreateCVContent() {
               </div>
               <div className="mb-3">
                 <p className="text-green-400 text-xs font-medium mb-1">💪 Güçlü Yönler</p>
-                {scoreData.güçlü_yönler.map((item, i) => (
+                {scoreData.güçlü_yönler && scoreData.güçlü_yönler.map((item, i) => (
                   <p key={i} className="text-gray-400 text-xs">• {item}</p>
                 ))}
               </div>
               <div className="mb-3">
                 <p className="text-yellow-400 text-xs font-medium mb-1">🔧 İyileştirme Önerileri</p>
-                {scoreData.iyileştirme_önerileri.map((item, i) => (
+                {scoreData.iyileştirme_önerileri && scoreData.iyileştirme_önerileri.map((item, i) => (
                   <p key={i} className="text-gray-400 text-xs">• {item}</p>
                 ))}
               </div>
