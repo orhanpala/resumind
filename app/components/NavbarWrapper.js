@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Navbar from './Navbar'
+import AnnouncementBar from './AnnouncementBar'
 
 export default function NavbarWrapper() {
   const [user, setUser] = useState(null)
@@ -20,5 +21,10 @@ export default function NavbarWrapper() {
     return () => subscription.unsubscribe()
   }, [])
 
-  return <Navbar user={user} />
+  return (
+    <>
+      <Navbar user={user} />
+      <AnnouncementBar />
+    </>
+  )
 }
