@@ -71,10 +71,17 @@ export default function Navbar({ user }) {
         <div className="flex items-center gap-3">
           {user ? (
             <>
+           <>
               <p className="text-gray-400 text-sm hidden md:block">{user.email}</p>
+              {user.email === 'palaorhan30@gmail.com' && (
+                <button onClick={() => router.push('/admin')} className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-xl transition-all">
+                  ⚙️ Admin
+                </button>
+              )}
               <button onClick={handleLogout} className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-xl transition-all">
                 Çıkış Yap
               </button>
+            </>
             </>
           ) : (
             <>
