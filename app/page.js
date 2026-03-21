@@ -26,20 +26,29 @@ const features = [
 export default function Home() {
   const router = useRouter()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [checking, setChecking] = useState(true)
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) router.push('/dashboard')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        router.push('/dashboard')
+      } else {
+        setChecking(false)
+      }
     }
     checkUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) router.push('/dashboard')
+      if (event === 'SIGNED_IN' && session) {
+        router.push('/dashboard')
+      }
     })
 
     return () => subscription.unsubscribe()
   }, [])
+
+  if (checking) return null
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -47,14 +56,9 @@ export default function Home() {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4 bg-black bg-opacity-20 backdrop-blur-md border-b border-white border-opacity-10">
         <h1 onClick={() => router.push('/')} className="text-white text-xl font-bold cursor-pointer">Resumind</h1>
-        
         <div className="hidden md:flex items-center gap-8">
-          {/* Özellikler Dropdown */}
           <div className="relative">
-            <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="text-white text-sm flex items-center gap-1 hover:text-purple-300 transition-all"
-            >
+            <button onClick={() => setDropdownOpen(!dropdownOpen)} className="text-white text-sm flex items-center gap-1 hover:text-purple-300 transition-all">
               Özellikler
               <svg className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -79,27 +83,20 @@ export default function Home() {
               </div>
             )}
           </div>
-          <button onClick={() => router.push('/dashboard')} className="text-white text-sm hover:text-purple-300 transition-all">CV Şablonları</button>
-          <button onClick={() => router.push('/#ucretlendirme')} className="text-white text-sm hover:text-purple-300 transition-all">Ücretlendirme</button>
+          <button onClick={() => router.push('/login')} className="text-white text-sm hover:text-purple-300 transition-all">CV Şablonları</button>
+          <button className="text-white text-sm hover:text-purple-300 transition-all">Ücretlendirme</button>
           <button className="text-white text-sm hover:text-purple-300 transition-all">İletişim</button>
         </div>
-
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/login')} className="text-white text-sm border border-white border-opacity-30 px-4 py-2 rounded-xl hover:bg-white hover:bg-opacity-10 transition-all">
-            Giriş Yap
-          </button>
-          <button onClick={() => router.push('/login')} className="bg-green-500 hover:bg-green-400 text-white text-sm px-4 py-2 rounded-xl transition-all font-medium">
-            Kayıt Ol
-          </button>
+          <button onClick={() => router.push('/login')} className="text-white text-sm border border-white border-opacity-30 px-4 py-2 rounded-xl hover:bg-white hover:bg-opacity-10 transition-all">Giriş Yap</button>
+          <button onClick={() => router.push('/login')} className="bg-green-500 hover:bg-green-400 text-white text-sm px-4 py-2 rounded-xl transition-all font-medium">Kayıt Ol</button>
         </div>
       </nav>
 
-      {/* Dropdown kapatmak için arka plan */}
       {dropdownOpen && <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)}></div>}
 
       {/* Hero */}
-      <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 pt-20"
-        style={{ background: 'linear-gradient(135deg, #6B21A8 0%, #4F46E5 50%, #2563EB 100%)' }}>
+      <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 pt-20" style={{ background: 'linear-gradient(135deg, #6B21A8 0%, #4F46E5 50%, #2563EB 100%)' }}>
         <div className="inline-block bg-white bg-opacity-20 text-white text-sm px-4 py-1 rounded-full mb-6 border border-white border-opacity-30">
           ✨ Yapay Zeka Destekli CV Oluşturucu
         </div>
@@ -107,25 +104,17 @@ export default function Home() {
           Hayalindeki işe<br />
           <span className="text-green-400">saniyeler içinde</span> başvur
         </h1>
-        <p className="text-white text-opacity-80 text-xl mb-10 max-w-2xl leading-relaxed opacity-90">
+        <p className="text-white text-xl mb-10 max-w-2xl leading-relaxed opacity-90">
           Yapay zeka CV'ni otomatik oluşturur, düzenler ve 12 profesyonel şablona uyarlar. Bilgilerini yaz veya mevcut CV'ni yükle, gerisini biz halledelim.
         </p>
         <div className="flex flex-col items-center gap-3">
-          <button
-            onClick={() => router.push('/login')}
-            className="bg-green-500 hover:bg-green-400 text-white font-bold px-10 py-4 rounded-2xl transition-all text-lg uppercase tracking-wide flex items-center gap-2"
-          >
+          <button onClick={() => router.push('/login')} className="bg-green-500 hover:bg-green-400 text-white font-bold px-10 py-4 rounded-2xl transition-all text-lg uppercase tracking-wide">
             Hemen Başla — Ücretsiz Dene →
           </button>
           <p className="text-white text-sm opacity-70">Kart bilgisi girmen gerekmez</p>
         </div>
-
         <div className="flex items-center justify-center gap-12 mt-16 flex-wrap">
-          {[
-            { number: '12', label: 'Profesyonel Şablon' },
-            { number: 'PDF', label: 've Word Desteği' },
-            { number: 'AI', label: 'Destekli İçerik' },
-          ].map((stat, i) => (
+          {[{ number: '12', label: 'Profesyonel Şablon' }, { number: 'PDF', label: 've Word Desteği' }, { number: 'AI', label: 'Destekli İçerik' }].map((stat, i) => (
             <div key={i} className="text-center">
               <p className="text-white text-3xl font-bold">{stat.number}</p>
               <p className="text-white text-sm mt-1 opacity-70">{stat.label}</p>
@@ -171,13 +160,9 @@ export default function Home() {
         <h2 className="text-white text-3xl font-bold text-center mb-4">Nasıl Çalışır?</h2>
         <p className="text-gray-400 text-center mb-12">3 adımda profesyonel CV</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            { step: '1', title: 'Şablon Seç', desc: 'Beğendiğin CV şablonunu seç' },
-            { step: '2', title: 'Bilgileri Gir', desc: 'CV bilgilerini yaz veya mevcut CV\'ni yükle' },
-            { step: '3', title: 'İndir', desc: 'Yapay zekanın oluşturduğu CV\'yi PDF olarak indir' }
-          ].map((item, i) => (
+          {[{ step: '1', title: 'Şablon Seç', desc: 'Beğendiğin CV şablonunu seç' }, { step: '2', title: 'Bilgileri Gir', desc: 'CV bilgilerini yaz veya mevcut CV\'ni yükle' }, { step: '3', title: 'İndir', desc: 'Yapay zekanın oluşturduğu CV\'yi PDF olarak indir' }].map((item, i) => (
             <div key={i} className="text-center">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mx-auto mb-4" style={{background: 'linear-gradient(135deg, #6B21A8, #2563EB)'}}>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mx-auto mb-4" style={{ background: 'linear-gradient(135deg, #6B21A8, #2563EB)' }}>
                 {item.step}
               </div>
               <h3 className="text-white font-semibold text-lg mb-2">{item.title}</h3>
@@ -189,7 +174,7 @@ export default function Home() {
 
       {/* CTA */}
       <div className="max-w-5xl mx-auto px-6 py-20">
-        <div className="rounded-3xl p-12 text-center" style={{background: 'linear-gradient(135deg, #6B21A8 0%, #4F46E5 50%, #2563EB 100%)'}}>
+        <div className="rounded-3xl p-12 text-center" style={{ background: 'linear-gradient(135deg, #6B21A8 0%, #4F46E5 50%, #2563EB 100%)' }}>
           <h2 className="text-white text-3xl font-bold mb-4">Hemen başla, ücretsiz dene</h2>
           <p className="text-white mb-8 opacity-80">Yapay zeka ile dakikalar içinde profesyonel CV'ni oluştur</p>
           <button onClick={() => router.push('/login')} className="bg-green-500 hover:bg-green-400 text-white font-bold px-8 py-4 rounded-2xl transition-all text-lg uppercase tracking-wide">
