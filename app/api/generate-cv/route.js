@@ -1,8 +1,11 @@
 import Groq from 'groq-sdk'
+import { createClient } from '@supabase/supabase-js'
 
-const groq = new Groq({
-  apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY,
-})
+const groq = new Groq({ apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY })
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+)
 
 export async function POST(request) {
   try {
@@ -52,6 +55,22 @@ ${cvContent}
     const responseText = completion.choices[0].message.content
     const jsonMatch = responseText.match(/\{[\s\S]*\}/)
     const cvData = JSON.parse(jsonMatch[0])
+
+    // Aktivite logu kaydet
+    try {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader) {
+        const token = authHeader.replace('Bearer ', '')
+        const { data: { user } } = await supabaseAdmin.auth.getUser(token)
+        if (user) {
+          await supabaseAdmin.from('activity_logs').insert({
+            user_id: user.id,
+            action: 'CV Oluşturuldu',
+            details: `${template} şablonu kullanıldı`
+          })
+        }
+      }
+    } catch (e) {}
 
     return Response.json({ success: true, cvData })
   } catch (error) {

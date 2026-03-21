@@ -24,6 +24,8 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('templates')
   const router = useRouter()
 
+ const [activeTemplates, setActiveTemplates] = useState([])
+
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -32,6 +34,8 @@ export default function Dashboard() {
         setUser(user)
         const { data } = await supabase.from('cvs').select('*').order('created_at', { ascending: false })
         if (data) setPastCVs(data)
+        const { data: templateData } = await supabase.from('template_settings').select('*').eq('is_active', true)
+        if (templateData) setActiveTemplates(templateData.map(t => t.template_id))
       }
     }
     getUser()
@@ -68,8 +72,13 @@ export default function Dashboard() {
               <p className="text-gray-400">Beğendiğin şablonu seç, yapay zeka CV'ni oluştursun</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {templates.map((template) => (
-                <div key={template.id} onClick={() => router.push(`/create-cv?template=${template.id}`)} className="bg-gray-900 border border-gray-800 hover:border-blue-500 rounded-2xl p-4 cursor-pointer transition-all group">
+            {templates.filter(t => activeTemplates.length === 0 || activeTemplates.includes(t.id)).map((template) => (
+                <div
+                  key={template.id}
+                  onClick={() => router.push(`/create-cv?template=${template.id}`)}
+                  className="bg-gray-900 border border-gray-800 hover:border-blue-500 rounded-2xl p-4 cursor-pointer transition-all group"
+                >
+
                   <div className="w-full h-36 bg-gray-800 rounded-xl mb-3 overflow-hidden group-hover:ring-2 group-hover:ring-blue-500 transition-all">
                     {template.preview}
                   </div>

@@ -42,9 +42,13 @@ function CreateCVContent() {
     if (!cvText) return
     setLoading(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch('/api/generate-cv', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'authorization': `Bearer ${session?.access_token || ''}`
+        },
         body: JSON.stringify({ cvContent: cvText, template, isRawText: mode === 'text' })
       })
       const data = await response.json()
