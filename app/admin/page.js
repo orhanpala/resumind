@@ -10,6 +10,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState([])
   const [cvs, setCvs] = useState([])
   const [activeTab, setActiveTab] = useState('stats')
+  const [pendingPosts, setPendingPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -27,6 +28,12 @@ export default function AdminPage() {
         .select('*')
         .order('created_at', { ascending: false })
       if (cvsData) setCvs(cvsData)
+        const { data: postsData } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+      if (postsData) setPendingPosts(postsData)
 
       const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/admin', {
@@ -43,6 +50,15 @@ export default function AdminPage() {
   const handleDeleteCV = async (id) => {
     await supabase.from('cvs').delete().eq('id', id)
     setCvs(cvs.filter(cv => cv.id !== id))
+  }
+  const handleApproveBlog = async (id) => {
+    await supabase.from('blog_posts').update({ status: 'approved' }).eq('id', id)
+    setPendingPosts(pendingPosts.filter(p => p.id !== id))
+  }
+
+  const handleRejectBlog = async (id) => {
+    await supabase.from('blog_posts').update({ status: 'rejected' }).eq('id', id)
+    setPendingPosts(pendingPosts.filter(p => p.id !== id))
   }
 
   if (loading) return (
@@ -74,13 +90,13 @@ export default function AdminPage() {
         </div>
 
         <div className="flex gap-2 mb-8">
-          {['stats', 'users', 'cvs'].map((tab) => (
+          {['stats', 'users', 'cvs', 'blog'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
             >
-              {tab === 'stats' ? '📊 İstatistikler' : tab === 'users' ? '👥 Kullanıcılar' : '📄 CV\'ler'}
+              {tab === 'stats' ? '📊 İstatistikler' : tab === 'users' ? '👥 Kullanıcılar' : tab === 'cvs' ? '📄 CV\'ler' : `✍️ Blog Onayları ${pendingPosts.length > 0 ? `(${pendingPosts.length})` : ''}`}
             </button>
           ))}
         </div>
@@ -209,7 +225,45 @@ export default function AdminPage() {
             </div>
           </div>
         )}
-
+{activeTab === 'blog' && (
+          <div>
+            <p className="text-gray-400 text-sm mb-4">Onay bekleyen {pendingPosts.length} yazı</p>
+            {pendingPosts.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-gray-500">Onay bekleyen blog yazısı yok</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {pendingPosts.map((post) => (
+                  <div key={post.id} className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="text-white font-semibold text-lg">{post.title}</h3>
+                        <p className="text-blue-400 text-sm">{post.category}</p>
+                        <p className="text-gray-500 text-xs mt-1">{post.author_name} — {new Date(post.created_at).toLocaleDateString('tr-TR')}</p>
+                      </div>
+                    </div>
+                    <p className="text-gray-400 text-sm mb-4 leading-relaxed line-clamp-3">{post.content}</p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleApproveBlog(post.id)}
+                        className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-xl transition-all"
+                      >
+                        ✅ Onayla
+                      </button>
+                      <button
+                        onClick={() => handleRejectBlog(post.id)}
+                        className="bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-xl transition-all"
+                      >
+                        ❌ Reddet
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
