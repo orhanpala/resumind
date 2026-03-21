@@ -28,27 +28,14 @@ export default function Home() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [checking, setChecking] = useState(true)
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        router.push('/dashboard')
-      } else {
-        setChecking(false)
-      }
-    }
-    checkUser()
-
+   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         router.push('/dashboard')
       }
     })
-
     return () => subscription.unsubscribe()
   }, [])
-
-  if (checking) return null
 
   return (
     <div className="min-h-screen bg-gray-950">
