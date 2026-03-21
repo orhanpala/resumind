@@ -23,6 +23,8 @@ function CreateCVContent() {
   const [scoring, setScoring] = useState(false)
   const [translating, setTranslating] = useState(false)
   const [currentLang, setCurrentLang] = useState('tr')
+  const [linkedinSummary, setLinkedinSummary] = useState(null)
+  const [generatingLinkedin, setGeneratingLinkedin] = useState(false)
   const router = useRouter()
 
   const CVComponent = CVComponents[template] || CVComponents.Modern
@@ -58,6 +60,7 @@ function CreateCVContent() {
   }
 
   const handleDownloadPDF = () => window.print()
+
   const handleTranslate = async (lang) => {
     if (!cvData) return
     setTranslating(true)
@@ -80,6 +83,7 @@ function CreateCVContent() {
     }
     setTranslating(false)
   }
+
   const handleScoreCV = async () => {
     if (!cvData) return
     setScoring(true)
@@ -96,6 +100,24 @@ function CreateCVContent() {
       alert('Bir hata oluştu')
     }
     setScoring(false)
+  }
+
+  const handleLinkedinSummary = async () => {
+    if (!cvData) return
+    setGeneratingLinkedin(true)
+    try {
+      const response = await fetch('/api/linkedin-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cvData })
+      })
+      const data = await response.json()
+      if (data.success) setLinkedinSummary(data.summary)
+      else alert('Hata: ' + data.error)
+    } catch (error) {
+      alert('Bir hata oluştu')
+    }
+    setGeneratingLinkedin(false)
   }
 
   return (
@@ -232,9 +254,9 @@ function CreateCVContent() {
 
           {cvData && (
             <div className="mt-4">
-              <div className="flex gap-3 mb-4">
+              <div className="flex gap-3 mb-2">
                 <button
-                  onClick={() => { setCvData(null); setPreviewData(emptyCV); setMode(null) }}
+                  onClick={() => { setCvData(null); setPreviewData(emptyCV); setMode(null); setScoreData(null); setLinkedinSummary(null) }}
                   className="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-sm py-3 rounded-xl"
                 >
                   Yeniden Oluştur
@@ -245,76 +267,103 @@ function CreateCVContent() {
                 >
                   📄 PDF İndir
                 </button>
-                {scoreData && (
-            <div className="mt-4 bg-gray-900 border border-gray-800 rounded-2xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white font-bold text-lg">CV Puanı</h3>
-                <div className="flex items-center gap-2">
-                  <div className={`text-3xl font-bold ${scoreData.toplam_puan >= 80 ? 'text-green-400' : scoreData.toplam_puan >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
-                    {scoreData.toplam_puan}
-                  </div>
-                  <span className="text-gray-400 text-sm">/100</span>
-                </div>
               </div>
-              <div className="space-y-2 mb-4">
-                {scoreData.kategoriler && Object.entries(scoreData.kategoriler).map(([key, val]) => (
-                  <div key={key}>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-gray-300 text-xs capitalize">{key}</span>
-                      <span className="text-gray-400 text-xs">{val.puan}/100</span>
-                    </div>
-                    <div className="w-full bg-gray-800 rounded-full h-1.5">
-                      <div
-                        className={`h-1.5 rounded-full ${val.puan >= 80 ? 'bg-green-500' : val.puan >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                        style={{ width: `${val.puan}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mb-3">
-                <p className="text-green-400 text-xs font-medium mb-1">💪 Güçlü Yönler</p>
-                {scoreData.güçlü_yönler && scoreData.güçlü_yönler.map((item, i) => (
-                  <p key={i} className="text-gray-400 text-xs">• {item}</p>
-                ))}
-              </div>
-              <div className="mb-3">
-                <p className="text-yellow-400 text-xs font-medium mb-1">🔧 İyileştirme Önerileri</p>
-                {scoreData.iyileştirme_önerileri && scoreData.iyileştirme_önerileri.map((item, i) => (
-                  <p key={i} className="text-gray-400 text-xs">• {item}</p>
-                ))}
-              </div>
-              <p className="text-gray-500 text-xs italic">{scoreData.genel_yorum}</p>
-            </div>
-          )}
-                <button
+
+              <button
                 onClick={handleScoreCV}
                 disabled={scoring}
-                className="w-full mt-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all"
+                className="w-full mb-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all"
               >
                 {scoring ? '🔍 Puanlanıyor...' : '⭐ CV\'yi Puanla'}
               </button>
-              <div className="flex gap-2 mt-2">
+
+              <div className="flex gap-2 mb-2">
                 <button
                   onClick={() => handleTranslate('en')}
                   disabled={translating || currentLang === 'en'}
                   className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all"
                 >
-                  {translating && currentLang !== 'en' ? '🌍 Çevriliyor...' : '🇬🇧 İngilizceye Çevir'}
+                  {translating ? '🌍 Çevriliyor...' : '🇬🇧 İngilizce'}
                 </button>
                 <button
                   onClick={() => handleTranslate('tr')}
                   disabled={translating || currentLang === 'tr'}
                   className="flex-1 bg-gray-600 hover:bg-gray-700 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all"
                 >
-                  {translating && currentLang === 'en' ? '🌍 Çevriliyor...' : '🇹🇷 Türkçeye Çevir'}
+                  {translating ? '🌍 Çevriliyor...' : '🇹🇷 Türkçe'}
                 </button>
               </div>
-              </div>
+
+              <button
+                onClick={handleLinkedinSummary}
+                disabled={generatingLinkedin}
+                className="w-full bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all"
+              >
+                {generatingLinkedin ? '⏳ Oluşturuluyor...' : '💼 LinkedIn Özeti Oluştur'}
+              </button>
+
               {/* Mobilde CV önizleme */}
-              <div className="md:hidden rounded-xl overflow-auto">
+              <div className="md:hidden rounded-xl overflow-auto mt-4">
                 <CVComponent cvData={cvData} color={color} />
               </div>
+
+              {scoreData && (
+                <div className="mt-4 bg-gray-900 border border-gray-800 rounded-2xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-white font-bold text-lg">CV Puanı</h3>
+                    <div className="flex items-center gap-2">
+                      <div className={`text-3xl font-bold ${scoreData.toplam_puan >= 80 ? 'text-green-400' : scoreData.toplam_puan >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                        {scoreData.toplam_puan}
+                      </div>
+                      <span className="text-gray-400 text-sm">/100</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2 mb-4">
+                    {scoreData.kategoriler && Object.entries(scoreData.kategoriler).map(([key, val]) => (
+                      <div key={key}>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-gray-300 text-xs capitalize">{key}</span>
+                          <span className="text-gray-400 text-xs">{val.puan}/100</span>
+                        </div>
+                        <div className="w-full bg-gray-800 rounded-full h-1.5">
+                          <div
+                            className={`h-1.5 rounded-full ${val.puan >= 80 ? 'bg-green-500' : val.puan >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${val.puan}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mb-3">
+                    <p className="text-green-400 text-xs font-medium mb-1">💪 Güçlü Yönler</p>
+                    {scoreData.güçlü_yönler && scoreData.güçlü_yönler.map((item, i) => (
+                      <p key={i} className="text-gray-400 text-xs">• {item}</p>
+                    ))}
+                  </div>
+                  <div className="mb-3">
+                    <p className="text-yellow-400 text-xs font-medium mb-1">🔧 İyileştirme Önerileri</p>
+                    {scoreData.iyileştirme_önerileri && scoreData.iyileştirme_önerileri.map((item, i) => (
+                      <p key={i} className="text-gray-400 text-xs">• {item}</p>
+                    ))}
+                  </div>
+                  <p className="text-gray-500 text-xs italic">{scoreData.genel_yorum}</p>
+                </div>
+              )}
+
+              {linkedinSummary && (
+                <div className="mt-4 bg-gray-900 border border-blue-800 rounded-2xl p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-white font-bold">💼 LinkedIn Profil Özeti</h3>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(linkedinSummary)}
+                      className="text-blue-400 hover:text-blue-300 text-xs border border-blue-800 px-2 py-1 rounded-lg"
+                    >
+                      Kopyala
+                    </button>
+                  </div>
+                  <p className="text-gray-300 text-sm leading-relaxed">{linkedinSummary}</p>
+                </div>
+              )}
             </div>
           )}
         </div>
