@@ -50,7 +50,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-950">
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-6 pt-24 pb-8">
         <div className="flex gap-2 mb-8 flex-wrap">
           <button onClick={() => setActiveTab('templates')} className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'templates' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>Şablonlar</button>
           <button onClick={() => setActiveTab('history')} className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'history' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>

@@ -4,9 +4,33 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 
 const premiumTemplates = [
-  { id: 'elegant', name: 'Elegant', desc: 'Minimalist, kart bazlı tasarım', color: 'from-purple-600 to-pink-500' },
-  { id: 'flat', name: 'Flat', desc: 'Düz, modern ve temiz', color: 'from-blue-600 to-cyan-500' },
-  { id: 'stackoverflow', name: 'Stack Overflow', desc: 'Teknoloji odaklı, profesyonel', color: 'from-orange-500 to-yellow-500' },
+  { id: 'elegant', name: 'Elegant', desc: 'Minimalist, kart bazlı', color: 'from-purple-600 to-pink-500', category: 'Minimal' },
+  { id: 'flat', name: 'Flat', desc: 'Düz, modern ve temiz', color: 'from-blue-600 to-cyan-500', category: 'Minimal' },
+  { id: 'stackoverflow', name: 'Stack Overflow', desc: 'Teknoloji odaklı', color: 'from-orange-500 to-yellow-500', category: 'Teknoloji' },
+  { id: 'corporate', name: 'Corporate', desc: 'Kurumsal, profesyonel', color: 'from-slate-700 to-slate-900', category: 'Kurumsal' },
+  { id: 'creative', name: 'Creative', desc: 'Yaratıcı, dinamik', color: 'from-violet-600 to-purple-600', category: 'Yaratıcı' },
+  { id: 'minimal', name: 'Minimal', desc: 'Sade ve temiz', color: 'from-gray-400 to-gray-600', category: 'Minimal' },
+  { id: 'executive', name: 'Executive', desc: 'Liderlik, üst düzey', color: 'from-gray-800 to-gray-900', category: 'Liderlik' },
+  { id: 'tech', name: 'Tech Dark', desc: 'GitHub tarzı koyu tema', color: 'from-gray-900 to-black', category: 'Teknoloji' },
+  { id: 'academic', name: 'Academic', desc: 'Akademik, resmi format', color: 'from-blue-900 to-blue-800', category: 'Akademik' },
+  { id: 'medical', name: 'Medical', desc: 'Sağlık sektörü', color: 'from-cyan-500 to-blue-500', category: 'Sağlık' },
+  { id: 'legal', name: 'Legal', desc: 'Hukuk sektörü', color: 'from-yellow-800 to-yellow-900', category: 'Hukuk' },
+  { id: 'modern-dark', name: 'Modern Dark', desc: 'Modern koyu tema', color: 'from-blue-600 to-indigo-700', category: 'Teknoloji' },
+  { id: 'pastel', name: 'Pastel', desc: 'Yumuşak pastel tonlar', color: 'from-orange-300 to-pink-300', category: 'Yaratıcı' },
+  { id: 'bold', name: 'Bold', desc: 'Güçlü, dikkat çekici', color: 'from-red-600 to-red-700', category: 'Yaratıcı' },
+  { id: 'nature', name: 'Nature', desc: 'Doğal yeşil tonlar', color: 'from-green-600 to-emerald-700', category: 'Minimal' },
+  { id: 'navy', name: 'Navy', desc: 'Lacivert kurumsal', color: 'from-blue-900 to-slate-900', category: 'Kurumsal' },
+  { id: 'teal', name: 'Teal', desc: 'Turkuaz modern', color: 'from-teal-500 to-cyan-600', category: 'Minimal' },
+  { id: 'rose', name: 'Rose', desc: 'Gül pembesi şık', color: 'from-rose-500 to-pink-600', category: 'Yaratıcı' },
+  { id: 'gold', name: 'Gold', desc: 'Altın sarısı prestij', color: 'from-amber-600 to-yellow-700', category: 'Liderlik' },
+  { id: 'indigo', name: 'Indigo', desc: 'İndigo mavi modern', color: 'from-indigo-600 to-violet-600', category: 'Minimal' },
+  { id: 'slate', name: 'Slate', desc: 'Gri tonlu kurumsal', color: 'from-slate-600 to-slate-800', category: 'Kurumsal' },
+  { id: 'orange', name: 'Orange', desc: 'Turuncu enerjik', color: 'from-orange-500 to-red-500', category: 'Yaratıcı' },
+  { id: 'zen', name: 'Zen', desc: 'Minimalist sakin', color: 'from-gray-500 to-gray-700', category: 'Minimal' },
+  { id: 'swiss', name: 'Swiss', desc: 'İsviçre tasarım stili', color: 'from-black to-gray-800', category: 'Minimal' },
+  { id: 'retro', name: 'Retro', desc: 'Retro vintage stil', color: 'from-yellow-600 to-amber-700', category: 'Yaratıcı' },
+  { id: 'purple-rain', name: 'Purple Rain', desc: 'Mor gradient şık', color: 'from-purple-700 to-indigo-800', category: 'Yaratıcı' },
+  { id: 'timeline-pro', name: 'Timeline Pro', desc: 'Zaman çizgili profesyonel', color: 'from-amber-500 to-orange-600', category: 'Kurumsal' },
 ]
 
 function PremiumTemplatesContent() {
