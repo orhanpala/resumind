@@ -35,7 +35,17 @@ export default function LoginPage() {
         }
       })
       if (error) setError(error.message)
-      else setSuccess(true)
+      else {
+        setSuccess(true)
+        try {
+          await fetch('/api/welcome-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          })
+        } catch (e) {}
+      }
+
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
