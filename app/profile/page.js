@@ -293,16 +293,109 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* HESAP SİL SEKMESİ */}
+      {/* HESAP SEKMESİ */}
         {activeTab === 'danger' && (
-          <div className="bg-gray-900 border border-red-900 rounded-2xl p-6">
-            <h2 className="text-white font-bold text-lg mb-2">Hesabı Sil</h2>
-            <p className="text-gray-400 text-sm mb-6">Hesabınızı sildiğinizde tüm CV'leriniz ve verileriniz kalıcı olarak silinir. Bu işlem geri alınamaz.</p>
-            <button onClick={handleDeleteAccount} className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-3 rounded-xl transition-all">
-              🗑️ Hesabımı Sil
-            </button>
+          <div className="space-y-4">
+
+            {/* Son Giriş Bilgileri */}
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+              <h2 className="text-white font-bold text-lg mb-4">Son Giriş Bilgileri</h2>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2 border-b border-gray-800">
+                  <p className="text-gray-400 text-sm">Email</p>
+                  <p className="text-white text-sm">{user.email}</p>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-gray-800">
+                  <p className="text-gray-400 text-sm">Son Giriş</p>
+                  <p className="text-white text-sm">{user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString('tr-TR') : '-'}</p>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-gray-800">
+                  <p className="text-gray-400 text-sm">Kayıt Tarihi</p>
+                  <p className="text-white text-sm">{new Date(user.created_at).toLocaleString('tr-TR')}</p>
+                </div>
+                <div className="flex items-center justify-between py-2">
+                  <p className="text-gray-400 text-sm">Email Doğrulama</p>
+                  <span className={`text-xs px-2 py-1 rounded-full ${user.email_confirmed_at ? 'bg-green-600 bg-opacity-20 text-green-400' : 'bg-yellow-600 bg-opacity-20 text-yellow-400'}`}>
+                    {user.email_confirmed_at ? '✓ Doğrulandı' : 'Bekliyor'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Email Değiştirme */}
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+              <h2 className="text-white font-bold text-lg mb-2">Email Değiştir</h2>
+              <p className="text-gray-400 text-sm mb-4">Yeni email adresinize doğrulama linki gönderilecektir.</p>
+              <div className="flex gap-3">
+                <input
+                  type="email"
+                  placeholder="Yeni email adresi"
+                  id="newEmail"
+                  className="flex-1 bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+                <button
+                  onClick={async () => {
+                    const newEmail = document.getElementById('newEmail').value
+                    if (!newEmail) return
+                    const { error } = await supabase.auth.updateUser({ email: newEmail })
+                    if (!error) setMessage({ type: 'success', text: 'Doğrulama emaili gönderildi!' })
+                    else setMessage({ type: 'error', text: 'Hata: ' + error.message })
+                    setTimeout(() => setMessage(null), 3000)
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl transition-all"
+                >
+                  Değiştir
+                </button>
+              </div>
+            </div>
+
+            {/* Tüm CV'leri Sil */}
+            <div className="bg-gray-900 border border-orange-900 rounded-2xl p-6">
+              <h2 className="text-white font-bold text-lg mb-2">Tüm CV'leri Sil</h2>
+              <p className="text-gray-400 text-sm mb-4">Hesabınız silinmez, sadece tüm CV'leriniz kalıcı olarak silinir.</p>
+              <button
+                onClick={async () => {
+                  if (!confirm('Tüm CV\'leriniz silinecek. Emin misiniz?')) return
+                  await supabase.from('cvs').delete().eq('user_id', user.id)
+                  setCvStats({ total: 0, favoriteTemplate: '', lastCV: null })
+                  setMessage({ type: 'success', text: 'Tüm CV\'ler silindi!' })
+                  setTimeout(() => setMessage(null), 3000)
+                }}
+                className="bg-orange-600 hover:bg-orange-700 text-white font-medium px-6 py-3 rounded-xl transition-all"
+              >
+                🗑️ Tüm CV'leri Sil
+              </button>
+            </div>
+
+            {/* Hesabı Dondur */}
+            <div className="bg-gray-900 border border-yellow-900 rounded-2xl p-6">
+              <h2 className="text-white font-bold text-lg mb-2">Hesabı Geçici Dondur</h2>
+              <p className="text-gray-400 text-sm mb-4">Hesabınız dondurulduğunda giriş yapamazsınız. İstediğinizde tekrar aktif edebilirsiniz.</p>
+              <button
+                onClick={async () => {
+                  if (!confirm('Hesabınızı dondurmak istediğinize emin misiniz?')) return
+                  await supabase.from('profiles').update({ is_frozen: true, frozen_at: new Date().toISOString() }).eq('id', user.id)
+                  await supabase.auth.signOut()
+                  router.push('/')
+                }}
+                className="bg-yellow-600 hover:bg-yellow-700 text-white font-medium px-6 py-3 rounded-xl transition-all"
+              >
+                🧊 Hesabımı Dondur
+              </button>
+            </div>
+
+            {/* Hesabı Sil */}
+            <div className="bg-gray-900 border border-red-900 rounded-2xl p-6">
+              <h2 className="text-white font-bold text-lg mb-2">Hesabı Sil</h2>
+              <p className="text-gray-400 text-sm mb-4">Hesabınızı sildiğinizde tüm CV'leriniz ve verileriniz kalıcı olarak silinir. Bu işlem geri alınamaz.</p>
+              <button onClick={handleDeleteAccount} className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-3 rounded-xl transition-all">
+                🗑️ Hesabımı Sil
+              </button>
+            </div>
+
           </div>
         )}
+
 
       </div>
     </div>
