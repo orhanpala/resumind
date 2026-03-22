@@ -5,7 +5,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-const ADMIN_EMAIL = 'palaorhan40@gmail.com'
+const ADMIN_EMAIL = 'palaorhan30@gmail.com'
 
 export async function POST(request) {
   try {

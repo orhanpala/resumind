@@ -96,15 +96,26 @@ export default function AdminPage() {
     setAnnouncements(announcements.map(a => a.id === id ? { ...a, active: !active } : a))
   }
 
-  const handleDeleteUser = async (userId) => {
+const handleDeleteUser = async (userId) => {
     if (!confirm('Bu kullanıcıyı silmek istediğinize emin misiniz?')) return
-    const { data: { session } } = await supabase.auth.getSession()
-    await fetch('/api/admin/delete-user', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ userId })
-    })
-    setUsers(users.filter(u => u.id !== userId))
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { alert('Oturum bulunamadı, tekrar giriş yapın'); return }
+      const res = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ userId })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setUsers(users.filter(u => u.id !== userId))
+        alert('Kullanıcı silindi!')
+      } else {
+        alert('Hata: ' + data.error)
+      }
+    } catch (error) {
+      alert('Bir hata oluştu: ' + error.message)
+    }
   }
 
   const handleToggleTemplate = async (templateId, field, value) => {
