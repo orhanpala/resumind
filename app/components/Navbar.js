@@ -73,7 +73,9 @@ export default function Navbar({ user }) {
           {user ? (
             <>
            <>
-              <p className="text-gray-400 text-sm hidden md:block">{user.email}</p>
+              <button onClick={() => router.push('/profile')} className="text-gray-400 hover:text-white text-sm transition-all">
+                👤 Profilim
+              </button>
               {user.email === 'palaorhan30@gmail.com' && (
                 <button onClick={() => router.push('/admin')} className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-xl transition-all">
                   ⚙️ Admin
