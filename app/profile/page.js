@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 
 export default function ProfilePage() {
   const [user, setUser] = useState(null)
-  const [profile, setProfile] = useState({ full_name: '', bio: '', linkedin_url: '', avatar_url: '', email_notifications: true })
+ const [profile, setProfile] = useState({ full_name: '', bio: '', linkedin_url: '', avatar_url: '', email_notifications: true, phone: '', birth_date: '', city: '', country: 'Türkiye', job_title: '', sector: '', github_url: '' })
   const [cvStats, setCvStats] = useState({ total: 0, favoriteTemplate: '', lastCV: null })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -40,10 +40,18 @@ export default function ProfilePage() {
     setSaving(true)
     const { error } = await supabase.from('profiles').upsert({
       id: user.id,
-      full_name: profile.full_name,
+     full_name: profile.full_name,
       bio: profile.bio,
       linkedin_url: profile.linkedin_url,
       email_notifications: profile.email_notifications,
+      phone: profile.phone,
+      birth_date: profile.birth_date || null,
+      city: profile.city,
+      country: profile.country,
+      job_title: profile.job_title,
+      sector: profile.sector,
+      github_url: profile.github_url,
+
       updated_at: new Date().toISOString()
     })
     if (!error) setMessage({ type: 'success', text: 'Profil kaydedildi!' })
@@ -168,9 +176,52 @@ export default function ProfilePage() {
                 <label className="text-gray-400 text-sm mb-1 block">Hakkımda</label>
                 <textarea placeholder="Kendiniz hakkında kısa bir biyografi yazın..." value={profile.bio || ''} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 text-sm h-24 resize-none" />
               </div>
+             <div>
+                <label className="text-gray-400 text-sm mb-1 block">Telefon Numarası</label>
+                <input type="tel" placeholder="+90 555 555 55 55" value={profile.phone || ''} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+              </div>
+              <div>
+                <label className="text-gray-400 text-sm mb-1 block">Doğum Tarihi</label>
+                <input type="date" value={profile.birth_date || ''} onChange={(e) => setProfile({ ...profile, birth_date: e.target.value })} className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">Şehir</label>
+                  <input type="text" placeholder="İstanbul" value={profile.city || ''} onChange={(e) => setProfile({ ...profile, city: e.target.value })} className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                </div>
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">Ülke</label>
+                  <input type="text" placeholder="Türkiye" value={profile.country || ''} onChange={(e) => setProfile({ ...profile, country: e.target.value })} className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">Meslek</label>
+                  <input type="text" placeholder="Yazılım Geliştirici" value={profile.job_title || ''} onChange={(e) => setProfile({ ...profile, job_title: e.target.value })} className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                </div>
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">Sektör</label>
+                  <select value={profile.sector || ''} onChange={(e) => setProfile({ ...profile, sector: e.target.value })} className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                    <option value="">Seçin</option>
+                    <option value="Teknoloji">Teknoloji</option>
+                    <option value="Finans">Finans</option>
+                    <option value="Sağlık">Sağlık</option>
+                    <option value="Eğitim">Eğitim</option>
+                    <option value="Hukuk">Hukuk</option>
+                    <option value="Pazarlama">Pazarlama</option>
+                    <option value="Mühendislik">Mühendislik</option>
+                    <option value="Tasarım">Tasarım</option>
+                    <option value="Diğer">Diğer</option>
+                  </select>
+                </div>
+              </div>
               <div>
                 <label className="text-gray-400 text-sm mb-1 block">LinkedIn Profil URL</label>
                 <input type="url" placeholder="https://linkedin.com/in/kullaniciadi" value={profile.linkedin_url || ''} onChange={(e) => setProfile({ ...profile, linkedin_url: e.target.value })} className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+              </div>
+              <div>
+                <label className="text-gray-400 text-sm mb-1 block">GitHub URL</label>
+                <input type="url" placeholder="https://github.com/kullaniciadi" value={profile.github_url || ''} onChange={(e) => setProfile({ ...profile, github_url: e.target.value })} className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
               </div>
               <button onClick={handleSaveProfile} disabled={saving} className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-3 rounded-xl transition-all">
                 {saving ? 'Kaydediliyor...' : '💾 Kaydet'}
