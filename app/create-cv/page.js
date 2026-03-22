@@ -28,6 +28,8 @@ function CreateCVContent() {
   const [generatingLinkedin, setGeneratingLinkedin] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [editData, setEditData] = useState(null)
+  const [shareLink, setShareLink] = useState(null)
+  const [sharing, setSharing] = useState(false)
   const [referenceLetter, setReferenceLetter] = useState(null)
   const [generatingReference, setGeneratingReference] = useState(false)
   const [showReferenceForm, setShowReferenceForm] = useState(false)
@@ -161,6 +163,32 @@ function CreateCVContent() {
     setPreviewData(newData)
     setEditMode(false)
   }
+  const handleShare = async () => {
+    if (!cvData) return
+    setSharing(true)
+    try {
+      const shareId = Math.random().toString(36).substring(2, 10)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: existingCV } = await supabase
+          .from('cvs')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('template', template)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (existingCV) {
+          await supabase.from('cvs').update({ share_id: shareId, is_shared: true }).eq('id', existingCV.id)
+        }
+        setShareLink(`${window.location.origin}/cv/${shareId}`)
+      }
+    } catch (error) {
+      alert('Hata oluştu')
+    }
+    setSharing(false)
+  }
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -260,6 +288,34 @@ function CreateCVContent() {
               <button onClick={() => { const copy = JSON.parse(JSON.stringify(cvData)); setEditData(copy); setEditMode(prev => !prev) }} className="w-full mb-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm py-3 rounded-xl transition-all">
                 ✏️ CV'yi Düzenle
               </button>
+              <button
+                onClick={handleShare}
+                disabled={sharing}
+                className="w-full mb-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all"
+              >
+                {sharing ? '🔗 Link Oluşturuluyor...' : '🔗 CV\'yi Paylaş'}
+              </button>
+
+              {shareLink && (
+                <div className="bg-gray-900 border border-green-700 rounded-2xl p-4 mb-2">
+                  <p className="text-green-400 text-xs mb-2">✅ Paylaşım linki oluşturuldu!</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={shareLink}
+                      readOnly
+                      className="flex-1 bg-gray-800 text-white rounded-xl px-3 py-2 text-xs outline-none"
+                    />
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(shareLink); alert('Link kopyalandı!') }}
+                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-2 rounded-xl"
+                    >
+                      Kopyala
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {editMode && editData && (
                 <div className="bg-gray-900 border border-yellow-700 rounded-2xl p-5 mb-2">
                   <p className="text-white font-medium text-sm mb-3">CV Bilgilerini Düzenle</p>
