@@ -101,6 +101,22 @@ export default function ProfilePage() {
     await supabase.auth.signOut()
     router.push('/')
   }
+  const calculateCompletion = () => {
+    const fields = [
+      profile.full_name,
+      profile.bio,
+      profile.linkedin_url,
+      profile.github_url,
+      profile.phone,
+      profile.birth_date,
+      profile.city,
+      profile.job_title,
+      profile.sector,
+      profile.avatar_url,
+    ]
+    const filled = fields.filter(f => f && f.toString().trim() !== '').length
+    return Math.round((filled / fields.length) * 100)
+  }
 
   if (loading) return <div className="min-h-screen bg-gray-950 flex items-center justify-center"><p className="text-white">Yükleniyor...</p></div>
 
@@ -136,6 +152,24 @@ export default function ProfilePage() {
             {message.text}
           </div>
         )}
+          {/* Profil Tamamlanma */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-white font-medium text-sm">Profil Tamamlanma</p>
+            <p className={`text-sm font-bold ${calculateCompletion() === 100 ? 'text-green-400' : calculateCompletion() >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+              %{calculateCompletion()}
+            </p>
+          </div>
+          <div className="w-full bg-gray-800 rounded-full h-3">
+            <div
+              className={`h-3 rounded-full transition-all ${calculateCompletion() === 100 ? 'bg-green-500' : calculateCompletion() >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+              style={{ width: `${calculateCompletion()}%` }}
+            ></div>
+          </div>
+          <p className="text-gray-500 text-xs mt-2">
+            {calculateCompletion() === 100 ? '🎉 Profiliniz tamamen doldurulmuş!' : `Profilinizi tamamlamak için ${10 - Math.round(calculateCompletion() / 10)} alan daha doldurun`}
+          </p>
+        </div>
 
         {/* CV İstatistikleri */}
         <div className="grid grid-cols-3 gap-4 mb-8">
