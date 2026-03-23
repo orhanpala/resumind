@@ -7,6 +7,8 @@ export default function ProfilePage() {
   const [user, setUser] = useState(null)
  const [profile, setProfile] = useState({ full_name: '', bio: '', linkedin_url: '', avatar_url: '', email_notifications: true, phone: '', birth_date: '', city: '', country: 'Türkiye', job_title: '', sector: '', github_url: '' })
   const [cvStats, setCvStats] = useState({ total: 0, favoriteTemplate: '', lastCV: null })
+  const [cvList, setCvList] = useState([])
+  const [activityLogs, setActivityLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
@@ -29,7 +31,11 @@ export default function ProfilePage() {
         const templateCounts = cvsData.reduce((acc, cv) => { acc[cv.template] = (acc[cv.template] || 0) + 1; return acc }, {})
         const favoriteTemplate = Object.entries(templateCounts).sort((a, b) => b[1] - a[1])[0][0]
         setCvStats({ total: cvsData.length, favoriteTemplate, lastCV: cvsData[0] })
+        setCvList(cvsData)
       }
+
+      const { data: logsData } = await supabase.from('activity_logs').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20)
+      if (logsData) setActivityLogs(logsData)
 
       setLoading(false)
     }
@@ -188,8 +194,8 @@ export default function ProfilePage() {
         </div>
 
         {/* Sekmeler */}
-        <div className="flex gap-2 mb-6">
-          {[{ id: 'profile', label: '👤 Profil' }, { id: 'settings', label: '⚙️ Ayarlar' }, { id: 'danger', label: '🗑️ Hesap' }].map(tab => (
+        <div className="flex gap-2 mb-6 flex-wrap">
+          {[{ id: 'profile', label: '👤 Profil' }, { id: 'cvs', label: `📄 CV'lerim (${cvList.length})` }, { id: 'badges', label: '🏆 Rozetler' }, { id: 'activity', label: '📋 Aktivite' }, { id: 'settings', label: '⚙️ Ayarlar' }, { id: 'danger', label: '🗑️ Hesap' }].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
               {tab.label}
@@ -294,6 +300,98 @@ export default function ProfilePage() {
         )}
 
       {/* HESAP SEKMESİ */}
+      {/* CV'LERİM SEKMESİ */}
+        {activeTab === 'cvs' && (
+          <div>
+            {cvList.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-5xl mb-4">📄</p>
+                <p className="text-gray-400">Henüz CV oluşturmadınız</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {cvList.map((cv) => (
+                  <div key={cv.id} className="bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-blue-500 transition-all">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="text-white font-semibold">{cv.cv_data.name}</h3>
+                        <span className="text-xs bg-blue-600 bg-opacity-20 text-blue-400 px-2 py-1 rounded-full">{cv.template}</span>
+                      </div>
+                      <p className="text-gray-500 text-xs">{new Date(cv.created_at).toLocaleDateString('tr-TR')}</p>
+                    </div>
+                    <p className="text-gray-400 text-sm line-clamp-2 mb-3">{cv.cv_data.summary}</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => router.push(`/create-cv?template=${cv.template}`)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs py-2 rounded-xl">Düzenle</button>
+                      {cv.share_id && cv.is_shared && (
+                        <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/cv/${cv.share_id}`); alert('Link kopyalandı!') }} className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs py-2 rounded-xl">🔗 Linki Kopyala</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ROZETLER SEKMESİ */}
+        {activeTab === 'badges' && (
+          <div>
+            <p className="text-gray-400 text-sm mb-6">Başarılarınızı takip edin!</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {[
+                { icon: '🎉', title: 'İlk CV', desc: 'İlk CV\'nizi oluşturdunuz', earned: cvList.length >= 1 },
+                { icon: '🔥', title: '5 CV', desc: '5 CV oluşturdunuz', earned: cvList.length >= 5 },
+                { icon: '💪', title: '10 CV', desc: '10 CV oluşturdunuz', earned: cvList.length >= 10 },
+                { icon: '🌍', title: 'Çevirmen', desc: 'CV\'nizi İngilizceye çevirdiniz', earned: activityLogs.some(l => l.action?.includes('Çeviri')) },
+                { icon: '⭐', title: 'Puancı', desc: 'CV\'nizi puanladınız', earned: activityLogs.some(l => l.action?.includes('Puan')) },
+                { icon: '🔗', title: 'Paylaşımcı', desc: 'CV\'nizi paylaştınız', earned: cvList.some(cv => cv.is_shared) },
+                { icon: '✏️', title: 'Editör', desc: 'CV\'nizi düzenlediniz', earned: activityLogs.some(l => l.action?.includes('Düzenle')) },
+                { icon: '💼', title: 'LinkedIn Pro', desc: 'LinkedIn özeti oluşturdunuz', earned: activityLogs.some(l => l.action?.includes('LinkedIn')) },
+                { icon: '📝', title: 'Referans', desc: 'Referans mektubu oluşturdunuz', earned: activityLogs.some(l => l.action?.includes('Referans')) },
+                { icon: '👑', title: 'Pro Kullanıcı', desc: 'Profilinizi %80 tamamladınız', earned: calculateCompletion() >= 80 },
+                { icon: '🏆', title: 'Şampiyon', desc: 'Tüm rozletleri kazandınız', earned: cvList.length >= 10 && cvList.some(cv => cv.is_shared) && calculateCompletion() >= 80 },
+                { icon: '🎨', title: 'Tasarımcı', desc: '5 farklı şablon kullandınız', earned: new Set(cvList.map(cv => cv.template)).size >= 5 },
+              ].map((badge, i) => (
+                <div key={i} className={`rounded-2xl p-5 text-center border transition-all ${badge.earned ? 'bg-gray-900 border-yellow-600 border-opacity-50' : 'bg-gray-900 border-gray-800 opacity-40'}`}>
+                  <div className="text-4xl mb-2">{badge.icon}</div>
+                  <h3 className={`font-bold text-sm mb-1 ${badge.earned ? 'text-yellow-400' : 'text-gray-500'}`}>{badge.title}</h3>
+                  <p className="text-gray-500 text-xs">{badge.desc}</p>
+                  {badge.earned && <p className="text-yellow-400 text-xs mt-2">✓ Kazanıldı</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* AKTİVİTE SEKMESİ */}
+        {activeTab === 'activity' && (
+          <div>
+            <p className="text-gray-400 text-sm mb-4">Son 20 aktivite</p>
+            {activityLogs.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-5xl mb-4">📋</p>
+                <p className="text-gray-400">Henüz aktivite yok</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {activityLogs.map((log) => (
+                  <div key={log.id} className="bg-gray-900 border border-gray-800 rounded-2xl px-5 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">
+                        {log.action?.includes('CV') ? '📄' : log.action?.includes('LinkedIn') ? '💼' : log.action?.includes('Referans') ? '📝' : log.action?.includes('Çeviri') ? '🌍' : '✅'}
+                      </span>
+                      <div>
+                        <p className="text-white text-sm font-medium">{log.action}</p>
+                        {log.details && <p className="text-gray-400 text-xs">{log.details}</p>}
+                      </div>
+                    </div>
+                    <p className="text-gray-500 text-xs">{new Date(log.created_at).toLocaleDateString('tr-TR')}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {activeTab === 'danger' && (
           <div className="space-y-4">
 
