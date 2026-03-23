@@ -18,16 +18,19 @@ export async function POST(request) {
     const { data: { user } } = await supabaseAdmin.auth.getUser(token)
     if (!user || user.email !== ADMIN_EMAIL) return Response.json({ error: 'Yetkisiz' }, { status: 401 })
 
-    const { subject, message, target } = await request.json()
+    const body = await request.json()
+    const { subject, message, target } = body
 
     const { data: { users } } = await supabaseAdmin.auth.admin.listUsers()
     
-    let targetUsers = users
-    if (target === 'confirmed') {
-      targetUsers = users.filter(u => u.email_confirmed_at)
+    let emails = []
+    if (target === 'custom' && body.customEmail) {
+      emails = [body.customEmail]
+    } else if (target === 'confirmed') {
+      emails = users.filter(u => u.email_confirmed_at).map(u => u.email).filter(Boolean)
+    } else {
+      emails = users.map(u => u.email).filter(Boolean)
     }
-
-    const emails = targetUsers.map(u => u.email).filter(Boolean)
 
     let successCount = 0
     let errorCount = 0

@@ -528,10 +528,21 @@ export default function AdminPage() {
           <div>
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
               <h3 className="text-white font-bold mb-4">Kullanıcılara Email Gönder</h3>
-              <select value={emailForm.target} onChange={(e) => setEmailForm({ ...emailForm, target: e.target.value })} className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 mb-3 outline-none text-sm">
+             <select value={emailForm.target} onChange={(e) => setEmailForm({ ...emailForm, target: e.target.value })} className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 mb-3 outline-none text-sm">
                 <option value="all">Tüm Kullanıcılar ({users.length} kişi)</option>
                 <option value="confirmed">Doğrulanmış Kullanıcılar ({users.filter(u => u.email_confirmed_at).length} kişi)</option>
+                <option value="custom">Belirli Email Adresi</option>
               </select>
+
+              {emailForm.target === 'custom' && (
+                <input
+                  type="email"
+                  placeholder="Email adresi girin"
+                  value={emailForm.customEmail || ''}
+                  onChange={(e) => setEmailForm({ ...emailForm, customEmail: e.target.value })}
+                  className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 mb-3 outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              )}
               <input type="text" placeholder="Email Konusu" value={emailForm.subject} onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })} className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 mb-3 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
               <textarea placeholder="Email İçeriği..." value={emailForm.message} onChange={(e) => setEmailForm({ ...emailForm, message: e.target.value })} className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 mb-4 outline-none focus:ring-2 focus:ring-blue-500 text-sm h-40 resize-none" />
               <button onClick={handleSendEmail} disabled={sendingEmail || !emailForm.subject || !emailForm.message} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm px-6 py-3 rounded-xl transition-all">
