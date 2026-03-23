@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import NavbarWrapper from "./components/NavbarWrapper"
+import { GoogleAnalytics } from '@next/third-parties/google'
 
 
 const geistSans = Geist({
@@ -45,6 +46,7 @@ export default function RootLayout({ children }) {
       <body className="min-h-full flex flex-col">
       <NavbarWrapper />
         {children}
+        <GoogleAnalytics gaId="G-QYCMYKYSGS" />
       </body>
     </html>
   )
