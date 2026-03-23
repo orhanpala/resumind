@@ -20,6 +20,8 @@ export default function AdminPage() {
   const [visitorStats, setVisitorStats] = useState({})
   const [activityLogs, setActivityLogs] = useState([])
   const [activeTab, setActiveTab] = useState('stats')
+  const [analyticsData, setAnalyticsData] = useState(null)
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', message: '', type: 'info' })
@@ -179,6 +181,7 @@ export default function AdminPage() {
   const totalVisitors = Object.values(visitorStats).reduce((a, b) => a + b, 0)
 
   const tabs = [
+    { id: 'analytics', label: '📈 Google Analytics' },
     { id: 'stats', label: '📊 İstatistikler' },
     { id: 'visitors', label: `👁️ Ziyaretçiler (${totalVisitors})` },
     { id: 'users', label: `👥 Kullanıcılar (${users.length})` },
@@ -214,6 +217,129 @@ export default function AdminPage() {
         </div>
 
         {/* İSTATİSTİKLER */}
+        {/* GOOGLE ANALYTICS */}
+        {activeTab === 'analytics' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-white text-xl font-bold">Google Analytics</h2>
+              <button
+                onClick={async () => {
+                  setLoadingAnalytics(true)
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession()
+                    const res = await fetch('/api/analytics', { headers: { authorization: `Bearer ${session.access_token}` } })
+                    const data = await res.json()
+                    if (data.success) setAnalyticsData(data.data)
+                    else alert('Hata: ' + data.error)
+                  } catch (e) { alert('Bir hata oluştu') }
+                  setLoadingAnalytics(false)
+                }}
+                disabled={loadingAnalytics}
+                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-xl"
+              >
+                {loadingAnalytics ? '⏳ Yükleniyor...' : '🔄 Verileri Çek'}
+              </button>
+            </div>
+
+            {!analyticsData ? (
+              <div className="text-center py-20">
+                <p className="text-5xl mb-4">📈</p>
+                <p className="text-gray-400 mb-4">Google Analytics verilerini görmek için butona tıklayın</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Özet Kartlar */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+                    <p className="text-gray-400 text-xs mb-1">Aktif Kullanıcı (30 gün)</p>
+                    <p className="text-blue-400 text-3xl font-bold">{analyticsData.activeUsers}</p>
+                  </div>
+                  <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+                    <p className="text-gray-400 text-xs mb-1">Toplam Sayfa Görüntüleme</p>
+                    <p className="text-green-400 text-3xl font-bold">{analyticsData.dailyStats.reduce((a, b) => a + parseInt(b.pageViews), 0)}</p>
+                  </div>
+                  <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+                    <p className="text-gray-400 text-xs mb-1">Toplam Oturum</p>
+                    <p className="text-purple-400 text-3xl font-bold">{analyticsData.dailyStats.reduce((a, b) => a + parseInt(b.sessions), 0)}</p>
+                  </div>
+                  <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+                    <p className="text-gray-400 text-xs mb-1">Ülke Sayısı</p>
+                    <p className="text-yellow-400 text-3xl font-bold">{analyticsData.countries.length}</p>
+                  </div>
+                </div>
+
+                {/* Günlük İstatistikler */}
+                <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                  <h3 className="text-white font-semibold mb-4">Son 30 Gün - Günlük Ziyaretler</h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {analyticsData.dailyStats.slice(-14).reverse().map((day, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <p className="text-gray-400 text-xs w-24">{day.date.replace(/(\d{4})(\d{2})(\d{2})/, '$3/$2/$1')}</p>
+                        <div className="flex-1 bg-gray-800 rounded-full h-2">
+                          <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${Math.min((parseInt(day.pageViews) / Math.max(...analyticsData.dailyStats.map(d => parseInt(d.pageViews)))) * 100, 100)}%` }}></div>
+                        </div>
+                        <p className="text-gray-400 text-xs w-16 text-right">{day.pageViews} görüntüleme</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* En Çok Ziyaret Edilen Sayfalar */}
+                  <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                    <h3 className="text-white font-semibold mb-4">En Çok Ziyaret Edilen Sayfalar</h3>
+                    <div className="space-y-3">
+                      {analyticsData.topPages.map((page, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <p className="text-gray-400 text-xs w-32 truncate">{page.page}</p>
+                          <div className="flex-1 bg-gray-800 rounded-full h-2">
+                            <div className="bg-green-500 h-2 rounded-full" style={{ width: `${(parseInt(page.views) / parseInt(analyticsData.topPages[0]?.views || 1)) * 100}%` }}></div>
+                          </div>
+                          <p className="text-gray-400 text-xs w-10 text-right">{page.views}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Cihaz Türleri */}
+                  <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                    <h3 className="text-white font-semibold mb-4">Cihaz Türleri</h3>
+                    <div className="space-y-3">
+                      {analyticsData.devices.map((device, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <p className="text-gray-400 text-sm w-24">
+                            {device.device === 'mobile' ? '📱 Mobil' : device.device === 'desktop' ? '💻 Masaüstü' : '📟 Tablet'}
+                          </p>
+                          <div className="flex-1 bg-gray-800 rounded-full h-2">
+                            <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${(parseInt(device.sessions) / analyticsData.devices.reduce((a, b) => a + parseInt(b.sessions), 0)) * 100}%` }}></div>
+                          </div>
+                          <p className="text-gray-400 text-xs w-10 text-right">{device.sessions}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Ülkeler */}
+                  <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                    <h3 className="text-white font-semibold mb-4">Ülkeler</h3>
+                    <div className="space-y-3">
+                      {analyticsData.countries.map((country, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <p className="text-gray-400 text-sm w-32 truncate">{country.country}</p>
+                          <div className="flex-1 bg-gray-800 rounded-full h-2">
+                            <div className="bg-yellow-500 h-2 rounded-full" style={{ width: `${(parseInt(country.sessions) / parseInt(analyticsData.countries[0]?.sessions || 1)) * 100}%` }}></div>
+                          </div>
+                          <p className="text-gray-400 text-xs w-10 text-right">{country.sessions}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'stats' && (
           <div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
