@@ -12,6 +12,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [uploadingSignature, setUploadingSignature] = useState(false)
   const [activeTab, setActiveTab] = useState('profile')
   const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' })
   const [message, setMessage] = useState(null)
@@ -83,6 +84,25 @@ export default function ProfilePage() {
       setMessage({ type: 'error', text: 'Fotoğraf yüklenemedi!' })
     }
     setUploadingPhoto(false)
+    setTimeout(() => setMessage(null), 3000)
+  }
+  const handleSignatureUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploadingSignature(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}.${fileExt}`
+      const { error: uploadError } = await supabase.storage.from('signatures').upload(fileName, file, { upsert: true })
+      if (uploadError) throw uploadError
+      const { data } = supabase.storage.from('signatures').getPublicUrl(fileName)
+      await supabase.from('profiles').upsert({ id: user.id, signature_url: data.publicUrl, updated_at: new Date().toISOString() })
+      setProfile({ ...profile, signature_url: data.publicUrl })
+      setMessage({ type: 'success', text: 'İmza yüklendi!' })
+    } catch (error) {
+      setMessage({ type: 'error', text: 'İmza yüklenemedi!' })
+    }
+    setUploadingSignature(false)
     setTimeout(() => setMessage(null), 3000)
   }
 
@@ -263,6 +283,39 @@ export default function ProfilePage() {
                 <label className="text-gray-400 text-sm mb-1 block">GitHub URL</label>
                 <input type="url" placeholder="https://github.com/kullaniciadi" value={profile.github_url || ''} onChange={(e) => setProfile({ ...profile, github_url: e.target.value })} className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
               </div>
+              <div>
+                <label className="text-gray-400 text-sm mb-2 block">İmza</label>
+                <div className="bg-gray-800 rounded-2xl p-4 border border-gray-700">
+                  {profile.signature_url ? (
+                    <div className="mb-3">
+                      <img src={profile.signature_url} alt="İmza" className="max-h-20 object-contain bg-white rounded-xl p-2" />
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 mb-3">
+                      <p className="text-gray-500 text-sm">Henüz imza yüklenmedi</p>
+                    </div>
+                  )}
+                  <label className="w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-2.5 rounded-xl cursor-pointer flex items-center justify-center gap-2 transition-all">
+                    {uploadingSignature ? '⏳ Yükleniyor...' : '✍️ İmza Yükle'}
+                    <input type="file" accept="image/*" className="hidden" onChange={handleSignatureUpload} />
+                  </label>
+                  {profile.signature_url && (
+                    <button
+                      onClick={async () => {
+                        await supabase.from('profiles').update({ signature_url: null }).eq('id', user.id)
+                        setProfile({ ...profile, signature_url: null })
+                        setMessage({ type: 'success', text: 'İmza silindi!' })
+                        setTimeout(() => setMessage(null), 3000)
+                      }}
+                      className="w-full mt-2 bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded-xl transition-all"
+                    >
+                      🗑️ İmzayı Sil
+                    </button>
+                  )}
+                </div>
+                <p className="text-gray-500 text-xs mt-1">PNG veya JPG formatında, şeffaf arka planlı imza önerilir</p>
+              </div>
+
               <button onClick={handleSaveProfile} disabled={saving} className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-3 rounded-xl transition-all">
                 {saving ? 'Kaydediliyor...' : '💾 Kaydet'}
               </button>
