@@ -1,7 +1,8 @@
 'use client'
 import { useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
+import LoadingAnimation from '../components/LoadingAnimation'
 
 const premiumTemplates = [
   { id: 'elegant', name: 'Elegant', desc: 'Minimalist, kart bazlı', color: 'from-purple-600 to-pink-500', category: 'Minimal' },
@@ -37,26 +38,37 @@ function PremiumTemplatesContent() {
   const [selectedTemplate, setSelectedTemplate] = useState('elegant')
   const [cvText, setCvText] = useState('')
   const [loading, setLoading] = useState(false)
+  const [cvData, setCvData] = useState(null)
   const [renderedHTML, setRenderedHTML] = useState(null)
   const [mode, setMode] = useState(null)
+  const [scoreData, setScoreData] = useState(null)
+  const [scoring, setScoring] = useState(false)
+  const [translating, setTranslating] = useState(false)
+  const [currentLang, setCurrentLang] = useState('tr')
+  const [linkedinSummary, setLinkedinSummary] = useState(null)
+  const [generatingLinkedin, setGeneratingLinkedin] = useState(false)
+  const [referenceLetter, setReferenceLetter] = useState(null)
+  const [generatingReference, setGeneratingReference] = useState(false)
+  const [showReferenceForm, setShowReferenceForm] = useState(false)
+  const [referenceInfo, setReferenceInfo] = useState({ refName: '', refPosition: '', refCompany: '', relationship: '' })
+  const [shareLink, setShareLink] = useState(null)
+  const [editMode, setEditMode] = useState(false)
+  const [editData, setEditData] = useState(null)
+  const [savedCvId, setSavedCvId] = useState(null)
   const router = useRouter()
 
   const handleGenerate = async () => {
     if (!cvText) return
     setLoading(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const generateRes = await fetch('/api/generate-cv', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'authorization': `Bearer ${session?.access_token || ''}` },
         body: JSON.stringify({ cvContent: cvText, template: selectedTemplate, isRawText: mode === 'text' })
       })
       const generateData = await generateRes.json()
-
-      if (!generateData.success) {
-        alert('Hata: ' + generateData.error)
-        setLoading(false)
-        return
-      }
+      if (!generateData.success) { alert('Hata: ' + generateData.error); setLoading(false); return }
 
       const renderRes = await fetch('/api/render-theme', {
         method: 'POST',
@@ -66,14 +78,12 @@ function PremiumTemplatesContent() {
       const renderData = await renderRes.json()
 
       if (renderData.success) {
+        setCvData(generateData.cvData)
         setRenderedHTML(renderData.html)
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
-          await supabase.from('cvs').insert({
-            user_id: user.id,
-            template: selectedTemplate,
-            cv_data: generateData.cvData
-          })
+          const { data: saved } = await supabase.from('cvs').insert({ user_id: user.id, template: selectedTemplate, cv_data: generateData.cvData }).select().single()
+          if (saved) setSavedCvId(saved.id)
         }
       } else {
         alert('Hata: ' + renderData.error)
@@ -84,82 +94,228 @@ function PremiumTemplatesContent() {
     setLoading(false)
   }
 
-  const handlePrint = () => window.print()
+  const handleScoreCV = async () => {
+    if (!cvData) return
+    setScoring(true)
+    try {
+      const res = await fetch('/api/score-cv', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cvData }) })
+      const data = await res.json()
+      if (data.success) setScoreData(data.scoreData)
+      else alert('Hata: ' + data.error)
+    } catch { alert('Bir hata oluştu') }
+    setScoring(false)
+  }
+
+  const handleTranslate = async (lang) => {
+    if (!cvData) return
+    setTranslating(true)
+    try {
+      const res = await fetch('/api/translate-cv', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cvData, targetLanguage: lang === 'en' ? 'İngilizce' : 'Türkçe' }) })
+      const data = await res.json()
+      if (data.success) {
+        setCvData(data.translatedCV)
+        const renderRes = await fetch('/api/render-theme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cvData: data.translatedCV, theme: selectedTemplate }) })
+        const renderData = await renderRes.json()
+        if (renderData.success) setRenderedHTML(renderData.html)
+        setCurrentLang(lang)
+      } else alert('Hata: ' + data.error)
+    } catch { alert('Bir hata oluştu') }
+    setTranslating(false)
+  }
+
+  const handleLinkedinSummary = async () => {
+    if (!cvData) return
+    setGeneratingLinkedin(true)
+    try {
+      const res = await fetch('/api/linkedin-summary', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cvData }) })
+      const data = await res.json()
+      if (data.success) setLinkedinSummary(data.summary)
+      else alert('Hata: ' + data.error)
+    } catch { alert('Bir hata oluştu') }
+    setGeneratingLinkedin(false)
+  }
+
+  const handleReferenceLetter = async () => {
+    if (!cvData || !referenceInfo.refName) return
+    setGeneratingReference(true)
+    try {
+      const res = await fetch('/api/reference-letter', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cvData, referenceInfo }) })
+      const data = await res.json()
+      if (data.success) { setReferenceLetter(data.letter); setShowReferenceForm(false) }
+      else alert('Hata: ' + data.error)
+    } catch { alert('Bir hata oluştu') }
+    setGeneratingReference(false)
+  }
+
+  const handleShare = async () => {
+    if (!savedCvId) return
+    const shareId = Math.random().toString(36).substring(2, 10)
+    await supabase.from('cvs').update({ share_id: shareId, is_shared: true }).eq('id', savedCvId)
+    const link = `${window.location.origin}/cv/${shareId}`
+    setShareLink(link)
+  }
+
+  const handleEditSave = async () => {
+    const newData = JSON.parse(JSON.stringify(editData))
+    setCvData(newData)
+    const renderRes = await fetch('/api/render-theme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cvData: newData, theme: selectedTemplate }) })
+    const renderData = await renderRes.json()
+    if (renderData.success) setRenderedHTML(renderData.html)
+    setEditMode(false)
+  }
 
   if (renderedHTML) {
     return (
       <div className="min-h-screen bg-gray-950 pt-20">
-        <div className="max-w-4xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-white text-2xl font-bold">CV Hazır! 🎉</h1>
+        <div className="flex h-screen">
+          <div className="w-full md:w-1/2 bg-gray-950 overflow-y-auto p-8 border-r border-gray-800">
+            <button onClick={() => { setRenderedHTML(null); setCvData(null); setMode(null); setScoreData(null); setLinkedinSummary(null); setReferenceLetter(null); setShareLink(null); setEditMode(false) }} className="text-gray-400 hover:text-white text-sm mb-6 flex items-center gap-2">← Geri</button>
+            <h1 className="text-white text-2xl font-bold mb-1">CV Hazır! 🎉</h1>
+            <p className="text-gray-400 text-sm mb-6">{selectedTemplate} şablonu</p>
+
+            <div className="flex gap-3 mb-4">
+              <button onClick={() => window.print()} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-3 rounded-xl">📄 PDF İndir</button>
+            </div>
+
+            <button onClick={() => { setEditData({...cvData}); setEditMode(!editMode) }} className="w-full mb-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm py-3 rounded-xl transition-all">✏️ CV'yi Düzenle</button>
+
+            {editMode && editData && (
+              <div className="bg-gray-900 border border-yellow-700 rounded-2xl p-5 mb-2">
+                <p className="text-white font-medium text-sm mb-3">CV Bilgilerini Düzenle</p>
+                <input type="text" placeholder="Ad Soyad" value={editData.name || ''} onChange={(e) => setEditData({...editData, name: e.target.value})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-yellow-500 text-sm" />
+                <input type="text" placeholder="Email" value={editData.email || ''} onChange={(e) => setEditData({...editData, email: e.target.value})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-yellow-500 text-sm" />
+                <input type="text" placeholder="Telefon" value={editData.phone || ''} onChange={(e) => setEditData({...editData, phone: e.target.value})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-yellow-500 text-sm" />
+                <input type="text" placeholder="Şehir" value={editData.location || ''} onChange={(e) => setEditData({...editData, location: e.target.value})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-yellow-500 text-sm" />
+                <textarea placeholder="Hakkımda" value={editData.summary || ''} onChange={(e) => setEditData({...editData, summary: e.target.value})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-yellow-500 text-sm h-20 resize-none" />
+                <p className="text-gray-400 text-xs mb-2">Beceriler (virgülle ayır)</p>
+                <input type="text" placeholder="Python, React, Node.js" value={editData.skills?.join(', ') || ''} onChange={(e) => setEditData({...editData, skills: e.target.value.split(',').map(s => s.trim()).filter(s => s)})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-3 outline-none focus:ring-2 focus:ring-yellow-500 text-sm" />
+                <button onClick={handleEditSave} className="w-full bg-yellow-600 hover:bg-yellow-700 text-white text-sm py-3 rounded-xl mt-2 transition-all">✅ Değişiklikleri Kaydet</button>
+              </div>
+            )}
+
+            <button onClick={handleShare} className="w-full mb-2 bg-green-600 hover:bg-green-700 text-white text-sm py-3 rounded-xl transition-all">🔗 CV'yi Paylaş</button>
+            {shareLink && (
+              <div className="bg-gray-900 border border-green-700 rounded-2xl p-4 mb-2">
+                <p className="text-green-400 text-xs mb-2">✅ Paylaşım linki oluşturuldu!</p>
+                <div className="flex gap-2">
+                  <input type="text" value={shareLink} readOnly className="flex-1 bg-gray-800 text-white rounded-xl px-3 py-2 text-xs outline-none" />
+                  <button onClick={() => { navigator.clipboard.writeText(shareLink); alert('Link kopyalandı!') }} className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-2 rounded-xl">Kopyala</button>
+                </div>
+              </div>
+            )}
+
+            <button onClick={handleScoreCV} disabled={scoring} className="w-full mb-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all">
+              {scoring ? '🔍 Puanlanıyor...' : '⭐ CV\'yi Puanla'}
+            </button>
+
+            <div className="flex gap-2 mb-2">
+              <button onClick={() => handleTranslate('en')} disabled={translating || currentLang === 'en'} className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all">
+                {translating ? '🌍 Çevriliyor...' : '🇬🇧 İngilizce'}
+              </button>
+              <button onClick={() => handleTranslate('tr')} disabled={translating || currentLang === 'tr'} className="flex-1 bg-gray-600 hover:bg-gray-700 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all">
+                {translating ? '🌍 Çevriliyor...' : '🇹🇷 Türkçe'}
+              </button>
+            </div>
+
+            <button onClick={handleLinkedinSummary} disabled={generatingLinkedin} className="w-full mb-2 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all">
+              {generatingLinkedin ? '⏳ Oluşturuluyor...' : '💼 LinkedIn Özeti Oluştur'}
+            </button>
+
+            <button onClick={() => setShowReferenceForm(!showReferenceForm)} className="w-full mb-2 bg-orange-600 hover:bg-orange-700 text-white text-sm py-3 rounded-xl transition-all">
+              📝 Referans Mektubu Oluştur
+            </button>
+
+            {showReferenceForm && (
+              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-2">
+                <p className="text-white font-medium text-sm mb-3">Referans Veren Bilgileri</p>
+                <input type="text" placeholder="Referansın adı soyadı" value={referenceInfo.refName} onChange={(e) => setReferenceInfo({...referenceInfo, refName: e.target.value})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-orange-500 text-sm" />
+                <input type="text" placeholder="Referansın pozisyonu" value={referenceInfo.refPosition} onChange={(e) => setReferenceInfo({...referenceInfo, refPosition: e.target.value})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-orange-500 text-sm" />
+                <input type="text" placeholder="Referansın şirketi" value={referenceInfo.refCompany} onChange={(e) => setReferenceInfo({...referenceInfo, refCompany: e.target.value})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-2 outline-none focus:ring-2 focus:ring-orange-500 text-sm" />
+                <input type="text" placeholder="İlişki (Eski müdürüm vb.)" value={referenceInfo.relationship} onChange={(e) => setReferenceInfo({...referenceInfo, relationship: e.target.value})} className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 mb-3 outline-none focus:ring-2 focus:ring-orange-500 text-sm" />
+                <button onClick={handleReferenceLetter} disabled={generatingReference || !referenceInfo.refName} className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-sm py-3 rounded-xl transition-all">
+                  {generatingReference ? '⏳ Oluşturuluyor...' : '📝 Mektubu Oluştur'}
+                </button>
+              </div>
+            )}
+
+            {scoreData && (
+              <div className="mt-4 bg-gray-900 border border-gray-800 rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-white font-bold text-lg">CV Puanı</h3>
+                  <div className="flex items-center gap-2">
+                    <div className={`text-3xl font-bold ${scoreData.toplam_puan >= 80 ? 'text-green-400' : scoreData.toplam_puan >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>{scoreData.toplam_puan}</div>
+                    <span className="text-gray-400 text-sm">/100</span>
+                  </div>
+                </div>
+                <div className="space-y-2 mb-4">
+                  {scoreData.kategoriler && Object.entries(scoreData.kategoriler).map(([key, val]) => (
+                    <div key={key}>
+                      <div className="flex justify-between mb-1"><span className="text-gray-300 text-xs capitalize">{key}</span><span className="text-gray-400 text-xs">{val.puan}/100</span></div>
+                      <div className="w-full bg-gray-800 rounded-full h-1.5"><div className={`h-1.5 rounded-full ${val.puan >= 80 ? 'bg-green-500' : val.puan >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${val.puan}%` }}></div></div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mb-3"><p className="text-green-400 text-xs font-medium mb-1">💪 Güçlü Yönler</p>{scoreData.güçlü_yönler?.map((item, i) => <p key={i} className="text-gray-400 text-xs">• {item}</p>)}</div>
+                <div className="mb-3"><p className="text-yellow-400 text-xs font-medium mb-1">🔧 İyileştirme Önerileri</p>{scoreData.iyileştirme_önerileri?.map((item, i) => <p key={i} className="text-gray-400 text-xs">• {item}</p>)}</div>
+                <p className="text-gray-500 text-xs italic">{scoreData.genel_yorum}</p>
+              </div>
+            )}
+
+            {linkedinSummary && (
+              <div className="mt-4 bg-gray-900 border border-blue-800 rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-white font-bold">💼 LinkedIn Profil Özeti</h3>
+                  <button onClick={() => navigator.clipboard.writeText(linkedinSummary)} className="text-blue-400 hover:text-blue-300 text-xs border border-blue-800 px-2 py-1 rounded-lg">Kopyala</button>
+                </div>
+                <p className="text-gray-300 text-sm leading-relaxed">{linkedinSummary}</p>
+              </div>
+            )}
+
+            {referenceLetter && (
+              <div className="mt-4 bg-gray-900 border border-orange-800 rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-white font-bold">📝 Referans Mektubu</h3>
+                  <button onClick={() => navigator.clipboard.writeText(referenceLetter)} className="text-orange-400 hover:text-orange-300 text-xs border border-orange-800 px-2 py-1 rounded-lg">Kopyala</button>
+                </div>
+                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">{referenceLetter}</p>
+              </div>
+            )}
           </div>
-          <div className="flex gap-3 mb-6 flex-wrap">
-            <button onClick={() => setRenderedHTML(null)} className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-xl">
-              Yeniden Oluştur
-            </button>
-            <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl">
-              📄 PDF İndir
-            </button>
-            <button
-              onClick={async () => {
-                const shareId = Math.random().toString(36).substring(2, 10)
-                const { data: { user } } = await supabase.auth.getUser()
-                if (user) {
-                  const { data: existingCV } = await supabase.from('cvs').select('id').eq('user_id', user.id).eq('template', selectedTemplate).order('created_at', { ascending: false }).limit(1).single()
-                  if (existingCV) {
-                    await supabase.from('cvs').update({ share_id: shareId, is_shared: true }).eq('id', existingCV.id)
-                    const link = `${window.location.origin}/cv/${shareId}`
-                    navigator.clipboard.writeText(link)
-                    alert('🔗 Link kopyalandı: ' + link)
-                  }
-                }
-              }}
-              className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-xl"
-            >
-              🔗 CV'yi Paylaş
-            </button>
+
+          <div className="hidden md:flex w-1/2 bg-gray-900 p-8 flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-gray-400 text-sm font-medium">Önizleme</p>
+              <span className="text-xs bg-blue-600 bg-opacity-20 text-blue-400 px-2 py-1 rounded-full border border-blue-600 border-opacity-30">{selectedTemplate}</span>
+            </div>
+            <div className="flex-1 overflow-auto rounded-xl bg-white">
+              <div dangerouslySetInnerHTML={{ __html: renderedHTML }} />
+            </div>
           </div>
-          <div
-            className="bg-white rounded-2xl overflow-hidden shadow-2xl"
-            dangerouslySetInnerHTML={{ __html: renderedHTML }}
-          />
         </div>
       </div>
     )
   }
 
-
   return (
     <div className="min-h-screen bg-gray-950 pt-20">
       <div className="max-w-4xl mx-auto px-6 py-12">
-        <button onClick={() => router.push('/dashboard')} className="text-gray-400 hover:text-white text-sm mb-8 flex items-center gap-2">
-          ← Geri
-        </button>
-
+        <button onClick={() => router.push('/dashboard')} className="text-gray-400 hover:text-white text-sm mb-8 flex items-center gap-2">← Geri</button>
         <h1 className="text-white text-3xl font-bold mb-2">Premium Şablonlar</h1>
         <p className="text-gray-400 text-sm mb-8">JSON Resume temaları ile profesyonel CV oluştur</p>
 
-        {/* Şablon Seç */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           {premiumTemplates.map((t) => (
-            <div
-              key={t.id}
-              onClick={() => setSelectedTemplate(t.id)}
-              className={`rounded-2xl p-6 cursor-pointer transition-all border-2 ${selectedTemplate === t.id ? 'border-blue-500 bg-gray-800' : 'border-gray-800 bg-gray-900 hover:border-gray-600'}`}
-            >
+            <div key={t.id} onClick={() => setSelectedTemplate(t.id)} className={`rounded-2xl p-6 cursor-pointer transition-all border-2 ${selectedTemplate === t.id ? 'border-blue-500 bg-gray-800' : 'border-gray-800 bg-gray-900 hover:border-gray-600'}`}>
               <div className={`w-full h-24 rounded-xl bg-gradient-to-r ${t.color} mb-4 flex items-center justify-center`}>
                 <p className="text-white font-bold text-lg">{t.name}</p>
               </div>
               <h3 className="text-white font-semibold mb-1">{t.name}</h3>
               <p className="text-gray-400 text-xs">{t.desc}</p>
-              {selectedTemplate === t.id && (
-                <p className="text-blue-400 text-xs mt-2">✓ Seçildi</p>
-              )}
+              {selectedTemplate === t.id && <p className="text-blue-400 text-xs mt-2">✓ Seçildi</p>}
             </div>
           ))}
         </div>
 
-        {/* Mod Seç */}
         {!mode && (
           <div className="grid grid-cols-2 gap-4 mb-6">
             <button onClick={() => setMode('upload')} className="bg-gray-900 border border-gray-800 hover:border-blue-500 rounded-xl p-6 text-left transition-all">
@@ -178,12 +334,9 @@ function PremiumTemplatesContent() {
         {mode && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-gray-300 text-sm font-medium">
-                {mode === 'upload' ? 'CV dosyasını yükle' : 'Bilgilerini yaz'}
-              </p>
+              <p className="text-gray-300 text-sm font-medium">{mode === 'upload' ? 'CV dosyasını yükle' : 'Bilgilerini yaz'}</p>
               <button onClick={() => setMode(null)} className="text-gray-500 hover:text-white text-xs">Geri</button>
             </div>
-
             {mode === 'upload' && (
               <div className="mb-4">
                 <label className="w-full border-2 border-dashed border-gray-700 hover:border-blue-500 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all bg-gray-900">
@@ -200,35 +353,24 @@ function PremiumTemplatesContent() {
                       const data = await res.json()
                       if (data.success) setCvText(data.text)
                       else alert('Dosya okunamadı: ' + data.error)
-                    } catch (err) {
-                      alert('Bir hata oluştu')
-                    }
+                    } catch { alert('Bir hata oluştu') }
                   }} />
                 </label>
-                {cvText && (
-                  <div className="mt-3 bg-green-900 bg-opacity-30 border border-green-700 rounded-xl px-4 py-3">
-                    <p className="text-green-400 text-sm">✅ Dosya okundu! CV oluşturmaya hazır.</p>
-                  </div>
-                )}
+                {cvText && <div className="mt-3 bg-green-900 bg-opacity-30 border border-green-700 rounded-xl px-4 py-3"><p className="text-green-400 text-sm">✅ Dosya okundu!</p></div>}
               </div>
             )}
-
             {mode === 'text' && (
-              <textarea
-                value={cvText}
-                onChange={(e) => setCvText(e.target.value)}
-                placeholder="Örnek: Adım Ahmet, yazılım geliştirici olarak 3 yıl çalıştım..."
-                className="w-full bg-gray-900 border border-gray-800 text-white rounded-xl px-4 py-3 h-64 outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm mb-3"
-              />
+              <textarea value={cvText} onChange={(e) => setCvText(e.target.value)} placeholder="Örnek: Adım Ahmet, yazılım geliştirici olarak 3 yıl çalıştım..." className="w-full bg-gray-900 border border-gray-800 text-white rounded-xl px-4 py-3 h-64 outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm mb-3" />
             )}
-
-            <button
-              onClick={handleGenerate}
-              disabled={loading || !cvText}
-              className="w-full mt-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-4 rounded-xl transition-all text-lg"
-            >
-              {loading ? '✨ CV Oluşturuluyor...' : '✨ CV Oluştur'}
-            </button>
+            {loading ? (
+              <div className="mt-3 bg-gray-900 border border-gray-800 rounded-2xl">
+                <LoadingAnimation text="CV oluşturuluyor, lütfen bekleyin..." />
+              </div>
+            ) : (
+              <button onClick={handleGenerate} disabled={!cvText} className="w-full mt-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-4 rounded-xl transition-all text-lg">
+                ✨ CV Oluştur
+              </button>
+            )}
           </div>
         )}
       </div>
