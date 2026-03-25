@@ -26,16 +26,22 @@ body {
 }
 
 @media print {
-  body * {
-    visibility: hidden;
+  nav, .no-print {
+    display: none !important;
   }
-  .print-area, .print-area * {
-    visibility: visible;
+  body {
+    background: white !important;
   }
   .print-area {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+  * {
+    color: black !important;
   }
 }
