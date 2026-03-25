@@ -20,7 +20,7 @@ export async function GET(request) {
     if (userError) return Response.json({ error: 'Token hatası: ' + userError.message }, { status: 401 })
     if (!user) return Response.json({ error: 'Kullanıcı bulunamadı' }, { status: 401 })
     // Debug: email kontrolü geçici kapalı
-    console.log('Gelen email:', user.email, 'Beklenen:', ADMIN_EMAIL)
+    
     if (user.email !== ADMIN_EMAIL) return Response.json({ error: `Yetkisiz email: ${user.email} !== ${ADMIN_EMAIL}` }, { status: 401 })
 
 
