@@ -76,9 +76,12 @@ export default function AdminPage() {
       const data = await res.json()
       if (data.success) setUsers(data.users)
 
-      setLoading(false)
+         setLoading(false)
     }
-    init()
+    init().catch(err => {
+      console.error('Admin init hatası:', err)
+      setLoading(false)
+    })
   }, [])
 
   const handleDeleteCV = async (id) => {
