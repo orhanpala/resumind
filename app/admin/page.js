@@ -66,9 +66,12 @@ export default function AdminPage() {
       console.log('Session:', session?.access_token ? 'var' : 'yok')
       console.log('User email:', session?.user?.email)
       const res = await fetch('/api/admin', { headers: { authorization: `Bearer ${session?.access_token}` } })
-      const adminData = await res.json()
-      console.log('Admin response:', adminData)
-      if (adminData.success) setUsers(adminData.users)
+      if (res.ok) {
+        const adminData = await res.json()
+        console.log('Admin response:', adminData)
+        if (adminData.success) setUsers(adminData.users)
+      }
+
 
       const data = await res.json()
       if (data.success) setUsers(data.users)
