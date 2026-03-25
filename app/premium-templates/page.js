@@ -174,9 +174,16 @@ function PremiumTemplatesContent() {
             <p className="text-gray-400 text-sm mb-6">{selectedTemplate} şablonu</p>
 
             <div className="flex gap-3 mb-4">
-              <button onClick={() => {
+                         <button onClick={() => {
               const printWindow = window.open('', '_blank')
-              printWindow.document.write(`<!DOCTYPE html><html><head><title>CV</title><meta charset="utf-8"><style>body{margin:0;padding:0;}</style></head><body>${renderedHTML}<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script></body></html>`)
+              printWindow.document.write(`<!DOCTYPE html><html><head><title>CV</title><meta charset="utf-8"><style>
+                @page { margin: 0; size: A4; }
+                @media print {
+                  @page { margin: 0; }
+                  body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                }
+                body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              </style></head><body>${renderedHTML}<script>window.onload=function(){setTimeout(function(){window.print();window.onafterprint=function(){window.close();}},500)}<\/script></body></html>`)
               printWindow.document.close()
             }} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-3 rounded-xl">📄 PDF İndir</button>
 
