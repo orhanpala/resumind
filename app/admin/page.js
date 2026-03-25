@@ -138,7 +138,7 @@ export default function AdminPage() {
     if (!confirm('Bu kullanıcıyı silmek istediğinize emin misiniz?')) return
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { alert('Oturum bulunamadı, tekrar giriş yapın'); return }
+      if (!session) { alert('Oturum bulunamadı, lütfen tekrar giriş yapın'); return }
       const res = await fetch('/api/admin/delete-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'authorization': `Bearer ${session.access_token}` },
