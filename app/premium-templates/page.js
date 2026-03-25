@@ -287,7 +287,7 @@ function PremiumTemplatesContent() {
               <p className="text-gray-400 text-sm font-medium">Önizleme</p>
               <span className="text-xs bg-blue-600 bg-opacity-20 text-blue-400 px-2 py-1 rounded-full border border-blue-600 border-opacity-30">{selectedTemplate}</span>
             </div>
-            <div className="flex-1 overflow-auto rounded-xl bg-white">
+           <div className="flex-1 overflow-auto rounded-xl bg-white print-area">
               <div dangerouslySetInnerHTML={{ __html: renderedHTML }} />
             </div>
           </div>

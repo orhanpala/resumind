@@ -436,7 +436,7 @@ function CreateCVContent() {
             <p className="text-gray-400 text-sm font-medium">Canlı Önizleme</p>
             <span className="text-xs bg-blue-600 bg-opacity-20 text-blue-400 px-2 py-1 rounded-full border border-blue-600 border-opacity-30">{template}</span>
           </div>
-          <div className="flex-1 overflow-auto rounded-xl">
+          <div className="flex-1 overflow-auto rounded-xl print-area">
             <CVComponent cvData={cvData || previewData} color={color} />
           </div>
         </div>
