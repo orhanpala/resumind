@@ -90,16 +90,34 @@ function PremiumTemplatesContent() {
     return (
       <div className="min-h-screen bg-gray-950 pt-20">
         <div className="max-w-4xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <h1 className="text-white text-2xl font-bold">CV Hazır! 🎉</h1>
-            <div className="flex gap-3">
-              <button onClick={() => setRenderedHTML(null)} className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-xl">
-                Yeniden Oluştur
-              </button>
-              <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl">
-                📄 PDF İndir
-              </button>
-            </div>
+          </div>
+          <div className="flex gap-3 mb-6 flex-wrap">
+            <button onClick={() => setRenderedHTML(null)} className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-xl">
+              Yeniden Oluştur
+            </button>
+            <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl">
+              📄 PDF İndir
+            </button>
+            <button
+              onClick={async () => {
+                const shareId = Math.random().toString(36).substring(2, 10)
+                const { data: { user } } = await supabase.auth.getUser()
+                if (user) {
+                  const { data: existingCV } = await supabase.from('cvs').select('id').eq('user_id', user.id).eq('template', selectedTemplate).order('created_at', { ascending: false }).limit(1).single()
+                  if (existingCV) {
+                    await supabase.from('cvs').update({ share_id: shareId, is_shared: true }).eq('id', existingCV.id)
+                    const link = `${window.location.origin}/cv/${shareId}`
+                    navigator.clipboard.writeText(link)
+                    alert('🔗 Link kopyalandı: ' + link)
+                  }
+                }
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-xl"
+            >
+              🔗 CV'yi Paylaş
+            </button>
           </div>
           <div
             className="bg-white rounded-2xl overflow-hidden shadow-2xl"
@@ -109,6 +127,7 @@ function PremiumTemplatesContent() {
       </div>
     )
   }
+
 
   return (
     <div className="min-h-screen bg-gray-950 pt-20">
