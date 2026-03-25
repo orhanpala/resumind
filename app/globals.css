@@ -25,23 +25,3 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-@media print {
-  nav, .no-print {
-    display: none !important;
-  }
-  body {
-    background: white !important;
-  }
-  .print-area {
-    position: fixed !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    height: auto !important;
-    overflow: visible !important;
-    background: white !important;
-  }
-  * {
-    color: black !important;
-  }
-}

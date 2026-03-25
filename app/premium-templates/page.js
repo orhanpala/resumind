@@ -174,7 +174,12 @@ function PremiumTemplatesContent() {
             <p className="text-gray-400 text-sm mb-6">{selectedTemplate} şablonu</p>
 
             <div className="flex gap-3 mb-4">
-              <button onClick={() => window.print()} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-3 rounded-xl">📄 PDF İndir</button>
+              <button onClick={() => {
+              const printWindow = window.open('', '_blank')
+              printWindow.document.write(`<!DOCTYPE html><html><head><title>CV</title><meta charset="utf-8"><style>body{margin:0;padding:0;}</style></head><body>${renderedHTML}<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}<\/script></body></html>`)
+              printWindow.document.close()
+            }} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-3 rounded-xl">📄 PDF İndir</button>
+
             </div>
 
             <button onClick={() => { setEditData({...cvData}); setEditMode(!editMode) }} className="w-full mb-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm py-3 rounded-xl transition-all">✏️ CV'yi Düzenle</button>
