@@ -63,7 +63,13 @@ export default function AdminPage() {
       if (frozenRes.data) setFrozenUsers(frozenRes.data)
 
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/admin', { headers: { authorization: `Bearer ${session.access_token}` } })
+      console.log('Session:', session?.access_token ? 'var' : 'yok')
+      console.log('User email:', session?.user?.email)
+      const res = await fetch('/api/admin', { headers: { authorization: `Bearer ${session?.access_token}` } })
+      const adminData = await res.json()
+      console.log('Admin response:', adminData)
+      if (adminData.success) setUsers(adminData.users)
+
       const data = await res.json()
       if (data.success) setUsers(data.users)
 
