@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 export default function Navbar({ user }) {
   const router = useRouter()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -14,18 +15,15 @@ export default function Navbar({ user }) {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4 bg-gray-950 border-b border-gray-800">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-gray-950 border-b border-gray-800">
         <h1 onClick={() => router.push('/')} className="text-white text-xl font-bold cursor-pointer hover:text-blue-400 transition-all">
           Resumind
         </h1>
 
+        {/* Desktop Menü */}
         <div className="hidden md:flex items-center gap-6">
-          {/* Özellikler Dropdown */}
           <div className="relative">
-            <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="text-gray-400 hover:text-white text-sm flex items-center gap-1 transition-all"
-            >
+            <button onClick={() => setDropdownOpen(!dropdownOpen)} className="text-gray-400 hover:text-white text-sm flex items-center gap-1 transition-all">
               Özellikler
               <svg className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -36,70 +34,86 @@ export default function Navbar({ user }) {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-blue-400 font-bold text-xs uppercase tracking-widest mb-3">AI Özellikler</p>
-                    {[
-                      { label: 'AI CV Oluşturucu', path: '/create-cv' },
-                      { label: 'CV Puanlama', path: '/create-cv' },
-                      { label: 'Çoklu Dil', path: '/create-cv' },
-                    ].map((item) => (
-                      <p key={item.label} onClick={() => { router.push(user ? item.path : '/login'); setDropdownOpen(false) }} className="text-gray-400 text-sm py-1.5 hover:text-white cursor-pointer transition-all">
-                        {item.label}
-                      </p>
+                    {[{ label: 'AI CV Oluşturucu', path: '/create-cv' }, { label: 'CV Puanlama', path: '/create-cv' }, { label: 'Çoklu Dil', path: '/create-cv' }].map((item) => (
+                      <p key={item.label} onClick={() => { router.push(user ? item.path : '/login'); setDropdownOpen(false) }} className="text-gray-400 text-sm py-1.5 hover:text-white cursor-pointer transition-all">{item.label}</p>
                     ))}
                   </div>
                   <div>
                     <p className="text-blue-400 font-bold text-xs uppercase tracking-widest mb-3">Araçlar</p>
-                    {[
-                      { label: 'LinkedIn Özeti', path: '/create-cv' },
-                      { label: 'Referans Mektubu', path: '/create-cv' },
-                      { label: 'CV Düzenleme', path: '/create-cv' },
-                    ].map((item) => (
-                      <p key={item.label} onClick={() => { router.push(user ? item.path : '/login'); setDropdownOpen(false) }} className="text-gray-400 text-sm py-1.5 hover:text-white cursor-pointer transition-all">
-                        {item.label}
-                      </p>
+                    {[{ label: 'LinkedIn Özeti', path: '/create-cv' }, { label: 'Referans Mektubu', path: '/create-cv' }, { label: 'CV Düzenleme', path: '/create-cv' }].map((item) => (
+                      <p key={item.label} onClick={() => { router.push(user ? item.path : '/login'); setDropdownOpen(false) }} className="text-gray-400 text-sm py-1.5 hover:text-white cursor-pointer transition-all">{item.label}</p>
                     ))}
                   </div>
                 </div>
               </div>
             )}
           </div>
-
           <button onClick={() => router.push(user ? '/dashboard' : '/login')} className="text-gray-400 hover:text-white text-sm transition-all">CV Şablonları</button>
           <button onClick={() => router.push('/pricing')} className="text-gray-400 hover:text-white text-sm transition-all">Ücretlendirme</button>
-         <button onClick={() => router.push('/iletisim')} className="text-gray-400 hover:text-white text-sm transition-all">İletişim</button>
-         <button onClick={() => router.push('/blog')} className="text-gray-400 hover:text-white text-sm transition-all">Kariyer Blog</button>
+          <button onClick={() => router.push('/contact')} className="text-gray-400 hover:text-white text-sm transition-all">İletişim</button>
+          <button onClick={() => router.push('/blog')} className="text-gray-400 hover:text-white text-sm transition-all">Kariyer Blog</button>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Desktop Sağ Butonlar */}
+        <div className="hidden md:flex items-center gap-3">
           {user ? (
             <>
-           <>
-              <button onClick={() => router.push('/profile')} className="text-gray-400 hover:text-white text-sm transition-all">
-                👤 Profilim
-              </button>
+              <button onClick={() => router.push('/profile')} className="text-gray-400 hover:text-white text-sm transition-all">👤 Profilim</button>
               {user.email === 'palaorhan30@gmail.com' && (
-                <button onClick={() => router.push('/admin')} className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-xl transition-all">
-                  ⚙️ Admin
-                </button>
+                <button onClick={() => router.push('/admin')} className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-xl transition-all">⚙️ Admin</button>
               )}
-              <button onClick={handleLogout} className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-xl transition-all">
-                Çıkış Yap
-              </button>
-            </>
+              <button onClick={handleLogout} className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-xl transition-all">Çıkış Yap</button>
             </>
           ) : (
             <>
-              <button onClick={() => router.push('/login')} className="text-gray-400 hover:text-white text-sm border border-gray-700 px-4 py-2 rounded-xl transition-all">
-                Giriş Yap
-              </button>
-              <button onClick={() => router.push('/login')} className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl transition-all">
-                Kayıt Ol
-              </button>
+              <button onClick={() => router.push('/login')} className="text-gray-400 hover:text-white text-sm border border-gray-700 px-4 py-2 rounded-xl transition-all">Giriş Yap</button>
+              <button onClick={() => router.push('/login')} className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl transition-all">Kayıt Ol</button>
             </>
           )}
         </div>
+
+        {/* Mobil Hamburger */}
+        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden text-white p-2">
+          {mobileMenuOpen ? (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          )}
+        </button>
       </nav>
 
-      {dropdownOpen && <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)}></div>}
+      {/* Mobil Menü */}
+      {mobileMenuOpen && (
+        <div className="fixed top-16 left-0 right-0 z-50 bg-gray-950 border-b border-gray-800 px-6 py-4 md:hidden">
+          <div className="space-y-3">
+            <button onClick={() => { router.push(user ? '/dashboard' : '/login'); setMobileMenuOpen(false) }} className="w-full text-left text-gray-300 hover:text-white text-sm py-2 border-b border-gray-800">CV Şablonları</button>
+            <button onClick={() => { router.push(user ? '/create-cv' : '/login'); setMobileMenuOpen(false) }} className="w-full text-left text-gray-300 hover:text-white text-sm py-2 border-b border-gray-800">AI CV Oluşturucu</button>
+            <button onClick={() => { router.push('/pricing'); setMobileMenuOpen(false) }} className="w-full text-left text-gray-300 hover:text-white text-sm py-2 border-b border-gray-800">Ücretlendirme</button>
+            <button onClick={() => { router.push('/contact'); setMobileMenuOpen(false) }} className="w-full text-left text-gray-300 hover:text-white text-sm py-2 border-b border-gray-800">İletişim</button>
+            <button onClick={() => { router.push('/blog'); setMobileMenuOpen(false) }} className="w-full text-left text-gray-300 hover:text-white text-sm py-2 border-b border-gray-800">Kariyer Blog</button>
+            {user ? (
+              <>
+                <button onClick={() => { router.push('/profile'); setMobileMenuOpen(false) }} className="w-full text-left text-gray-300 hover:text-white text-sm py-2 border-b border-gray-800">👤 Profilim</button>
+                {user.email === 'palaorhan30@gmail.com' && (
+                  <button onClick={() => { router.push('/admin'); setMobileMenuOpen(false) }} className="w-full text-left text-purple-400 hover:text-purple-300 text-sm py-2 border-b border-gray-800">⚙️ Admin</button>
+                )}
+                <button onClick={() => { handleLogout(); setMobileMenuOpen(false) }} className="w-full bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-3 rounded-xl mt-2">Çıkış Yap</button>
+              </>
+            ) : (
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => { router.push('/login'); setMobileMenuOpen(false) }} className="flex-1 border border-gray-700 text-white text-sm py-3 rounded-xl">Giriş Yap</button>
+                <button onClick={() => { router.push('/login'); setMobileMenuOpen(false) }} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-3 rounded-xl">Kayıt Ol</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {(dropdownOpen || mobileMenuOpen) && <div className="fixed inset-0 z-40" onClick={() => { setDropdownOpen(false); setMobileMenuOpen(false) }}></div>}
     </>
   )
 }
