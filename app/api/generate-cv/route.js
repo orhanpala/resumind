@@ -12,28 +12,34 @@ export async function POST(request) {
     const { cvContent, template, isRawText } = await request.json()
 
     const prompt = isRawText
-      ? `Sen profesyonel bir CV yazarısın. Kullanıcı aşağıdaki ham bilgileri verdi. Bu bilgileri kullanarak ${template} şablonuna uygun, profesyonel ve etkileyici bir CV oluştur. Eğer bilgiler eksikse, mevcut bilgilerin ruhuna uygun şekilde dolgun ve profesyonel bir dil kullan. Sadece JSON formatında döndür, başka hiçbir şey yazma.
-      
+      ? `Sen profesyonel bir CV uzmanısın. Kullanıcı aşağıdaki ham bilgileri verdi. Bu bilgileri kullanarak profesyonel ve etkileyici bir CV oluştur. Eksik bilgileri mevcut bilgilerin ruhuna uygun şekilde tamamla. Sadece JSON formatında döndür, başka hiçbir şey yazma.
+
 Kullanıcının verdiği bilgiler:
 ${cvContent}
 
 Şu JSON formatında döndür:
 {
   "name": "Ad Soyad",
-  "email": "email",
+  "email": "email@example.com",
   "phone": "telefon",
   "location": "şehir",
-  "summary": "profesyonel özet",
+  "summary": "profesyonel özet (3-4 cümle)",
   "experience": [{"company": "şirket", "position": "pozisyon", "duration": "süre", "description": "açıklama"}],
-  "education": [{"school": "okul", "degree": "derece", "year": "yıl"}],
-  "skills": ["beceri1", "beceri2"]
+  "education": [{"school": "okul", "degree": "bölüm/derece", "year": "yıl"}],
+  "skills": ["beceri1", "beceri2", "beceri3"]
 }`
-      : `Sen profesyonel bir CV yazarısın. Kullanıcının mevcut CV içeriğini ${template} şablonuna uygun şekilde yeniden düzenle ve geliştir. Sadece JSON formatında döndür, başka hiçbir şey yazma.
+      : `Sen profesyonel bir CV uzmanısın. Aşağıdaki metin bir PDF'den otomatik çıkarılmıştır — sıralama bozuk, bazı kelimeler dağınık veya tekrar eden olabilir. Bu ham metinden CV bilgilerini akıllıca ayıkla ve ${template} şablonuna uygun, profesyonel bir CV oluştur.
 
-Mevcut CV içeriği:
+ÖNEMLİ KURALLAR:
+- Metinde karışık bile olsa isim, email, telefon, şehir, deneyim, eğitim ve becerileri doğru tespit et
+- Tekrar eden veya anlamsız kısımları yoksay
+- Eksik alanları boş string olarak bırak ("")
+- Sadece JSON döndür, başka hiçbir şey yazma
+
+Ham CV metni:
 ${cvContent}
 
-Şu JSON formatında döndür:
+JSON formatı:
 {
   "name": "Ad Soyad",
   "email": "email",
@@ -41,7 +47,7 @@ ${cvContent}
   "location": "şehir",
   "summary": "profesyonel özet",
   "experience": [{"company": "şirket", "position": "pozisyon", "duration": "süre", "description": "açıklama"}],
-  "education": [{"school": "okul", "degree": "derece", "year": "yıl"}],
+  "education": [{"school": "okul", "degree": "bölüm", "year": "yıl"}],
   "skills": ["beceri1", "beceri2"]
 }`
 
