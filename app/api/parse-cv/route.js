@@ -1,141 +1,100 @@
 import { NextResponse } from 'next/server'
+import Groq from 'groq-sdk'
+
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+
+async function extractPDFText(buffer) {
+  let text = ''
+  try {
+    const raw = await import('pdf-parse')
+    const fn = raw.default || raw
+    if (typeof fn === 'function') { const r = await fn(buffer); text = r.text || '' }
+  } catch {}
+
+  if (!text || text.trim().length < 50) {
+    try {
+      const PDFParser = (await import('pdf2json')).default
+      const data = await new Promise((res, rej) => {
+        const p = new PDFParser()
+        p.on('pdfParser_dataReady', res)
+        p.on('pdfParser_dataError', rej)
+        p.parseBuffer(buffer)
+      })
+      let t = ''
+      ;(data.Pages || []).forEach(pg => {
+        ;(pg.Texts || []).forEach(tx => {
+          ;(tx.R || []).forEach(r => { try { t += decodeURIComponent(r.T) + ' ' } catch { t += (r.T || '') + ' ' } })
+        })
+        t += '\n'
+      })
+      if (t.trim().length > text.trim().length) text = t
+    } catch {}
+  }
+  return text.trim()
+}
 
 export async function POST(request) {
   try {
     const formData = await request.formData()
     const file = formData.get('file')
-
     if (!file) return NextResponse.json({ error: 'Dosya bulunamadı' }, { status: 400 })
 
-    const bytes = await file.arrayBuffer()
+    const bytes  = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    const fileName = (file.name || '').toLowerCase()
-    let text = ''
-    let hasPhoto = false
-    let photoBase64 = null
-    let isScanned = false
+    const name   = (file.name || '').toLowerCase()
+    let text = '', hasPhoto = false, photoBase64 = null
 
-    /* ── TXT ─────────────────────────────────────────────────── */
-    if (fileName.endsWith('.txt') || file.type === 'text/plain') {
+    if (name.endsWith('.txt') || file.type === 'text/plain') {
       text = buffer.toString('utf-8')
 
-    /* ── PDF ─────────────────────────────────────────────────── */
-    } else if (fileName.endsWith('.pdf') || file.type === 'application/pdf') {
+    } else if (name.endsWith('.pdf') || file.type === 'application/pdf') {
+      text = await extractPDFText(buffer)
 
-      /* Deneme 1: pdf-parse */
-      try {
-        const raw = await import('pdf-parse')
-        const pdfParse = raw.default || raw
-        if (typeof pdfParse === 'function') {
-          const result = await pdfParse(buffer)
-          text = result.text || ''
-        }
-      } catch {}
-
-      /* Deneme 2: pdf2json (fallback veya foto tespiti için) */
       try {
         const PDFParser = (await import('pdf2json')).default
-        const result = await new Promise((resolve, reject) => {
-          const parser = new PDFParser()
-          parser.on('pdfParser_dataReady', resolve)
-          parser.on('pdfParser_dataError', reject)
-          parser.parseBuffer(buffer)
+        const data = await new Promise((res, rej) => {
+          const p = new PDFParser()
+          p.on('pdfParser_dataReady', res)
+          p.on('pdfParser_dataError', rej)
+          p.parseBuffer(buffer)
         })
-        /* Metin çıkar */
-        if (!text || text.trim().length < 50) {
-          let t = ''
-          ;(result.Pages || []).forEach(page => {
-            ;(page.Texts || []).forEach(tx => {
-              ;(tx.R || []).forEach(r => {
-                try { t += decodeURIComponent(r.T) + ' ' } catch { t += (r.T || '') + ' ' }
-              })
-            })
-            t += '\n'
-          })
-          if (t.trim().length > text.trim().length) text = t
-        }
-        /* Foto tespiti */
-        ;(result.Pages || []).forEach(page => {
-          ;(page.Imgs || []).forEach(img => {
-            if (img.w > 3 && img.h > 3) hasPhoto = true
-          })
+        ;(data.Pages || []).forEach(pg => {
+          ;(pg.Imgs || []).forEach(img => { if (img.w > 3 && img.h > 3) hasPhoto = true })
         })
       } catch {}
 
-      /* Taranmış PDF kontrolü */
       if (!text || text.trim().length < 30) {
-        isScanned = true
-        text = ''  // boş döndür, client uyarı gösterir
+        return NextResponse.json({
+          success: false,
+          isScanned: true,
+          error: 'Bu PDF taranmış görüntü içeriyor, metin okunamıyor. Lütfen bilgilerinizi manuel olarak girin.',
+        })
       }
 
-    /* ── DOCX / DOC ──────────────────────────────────────────── */
-    } else if (
-      fileName.endsWith('.docx') || fileName.endsWith('.doc') ||
-      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      file.type === 'application/msword'
-    ) {
+    } else if (name.endsWith('.docx') || name.endsWith('.doc') || file.type?.includes('word')) {
       const mammoth = await import('mammoth')
-      const textResult = await mammoth.extractRawText({ buffer })
-      text = textResult.value || ''
-
-      /* DOCX içi görsel */
+      text = (await mammoth.extractRawText({ buffer })).value || ''
       try {
         const html = await mammoth.convertToHtml({ buffer })
-        const imgMatch = html.value.match(/src="data:image\/(jpeg|png|gif|webp);base64,([^"]{3000,})"/)
-        if (imgMatch) {
-          photoBase64 = `data:image/${imgMatch[1]};base64,${imgMatch[2]}`
-          hasPhoto = true
-        }
+        const m = html.value.match(/src="data:image\/(jpeg|png|gif|webp);base64,([^"]{3000,})"/)
+        if (m) { photoBase64 = `data:image/${m[1]};base64,${m[2]}`; hasPhoto = true }
       } catch {}
 
-    /* ── Diğer tüm dosyalar ──────────────────────────────────── */
     } else {
-      /* UTF-8 metin olarak okumayı dene */
       try {
-        const decoded = buffer.toString('utf-8')
-        /* Makul miktarda okunabilir karakter varsa kabul et */
-        const readableChars = decoded.replace(/[^\x20-\x7E\u00C0-\u024F\u0100-\u024F]/g, '').length
-        if (readableChars > 50) {
-          text = decoded
-        } else {
-          return NextResponse.json(
-            { error: `"${file.name}" dosyası desteklenmiyor. PDF, Word (.docx) veya metin (.txt) dosyası yükleyin.` },
-            { status: 400 }
-          )
-        }
+        const dec = buffer.toString('utf-8')
+        if (dec.replace(/[^\x20-\x7E\u00C0-\u024F]/g, '').length > 50) text = dec
+        else return NextResponse.json({ error: `"${file.name}" desteklenmiyor. PDF, Word veya TXT yükleyin.` }, { status: 400 })
       } catch {
-        return NextResponse.json(
-          { error: 'Dosya okunamadı. PDF, Word veya metin dosyası yükleyin.' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: 'Dosya okunamadı.' }, { status: 400 })
       }
     }
 
-    /* ── Metin temizle ───────────────────────────────────────── */
-    text = text
-      .replace(/[ \t]+/g, ' ')
-      .replace(/(\r\n|\r|\n){3,}/g, '\n\n')
-      .trim()
-
-    /* Taranmış PDF */
-    if (isScanned) {
-      return NextResponse.json({
-        success: false,
-        isScanned: true,
-        error: 'Bu PDF görsel tabanlı (taranmış) görünüyor ve metin çıkarılamıyor. Bilgilerinizi manuel olarak yazabilir veya metin içeren bir PDF yükleyebilirsiniz.',
-      })
-    }
-
-    if (!text || text.length < 10) {
-      return NextResponse.json(
-        { error: 'Dosyadan metin okunamadı.' },
-        { status: 400 }
-      )
-    }
+    text = text.replace(/[ \t]+/g, ' ').replace(/(\r\n|\r|\n){3,}/g, '\n\n').trim()
+    if (!text || text.length < 10) return NextResponse.json({ error: 'Dosyadan metin okunamadı.' }, { status: 400 })
 
     return NextResponse.json({ success: true, text, hasPhoto, photoBase64 })
-
-  } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (e) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }
