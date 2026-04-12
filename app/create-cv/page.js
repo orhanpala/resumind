@@ -74,8 +74,33 @@ function CreateCVContent() {
     setLoading(false)
   }
 
-  const handleDownloadPDF = () => window.print()
+ const handleDownloadPDF = async () => {
+  const element = document.getElementById('cv-preview')
+  if (!element) return alert('CV önizlemesi bulunamadı. Önce CV oluşturun.')
+  try {
+    const html2canvas = (await import('html2canvas')).default
+    const { jsPDF } = await import('jspdf')
 
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+    })
+
+    const imgData = canvas.toDataURL('image/png')
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+
+    const pdfW = pdf.internal.pageSize.getWidth()
+    const pdfH = pdf.internal.pageSize.getHeight()
+    const ratio = Math.min(pdfW / canvas.width, pdfH / canvas.height)
+
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width * ratio, canvas.height * ratio)
+    pdf.save(`${previewData.name || 'cv'}-resumind.pdf`)
+  } catch (err) {
+    alert('PDF oluşturulurken hata: ' + err.message)
+  }
+}
   const handleTranslate = async (lang) => {
     if (!cvData) return
     setTranslating(true)
