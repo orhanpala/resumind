@@ -5,122 +5,135 @@ export async function POST(request) {
     const formData = await request.formData()
     const file = formData.get('file')
 
-    if (!file) {
-      return NextResponse.json({ error: 'Dosya bulunamadı' }, { status: 400 })
-    }
+    if (!file) return NextResponse.json({ error: 'Dosya bulunamadı' }, { status: 400 })
 
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    const fileName = file.name.toLowerCase()
+    const fileName = (file.name || '').toLowerCase()
     let text = ''
     let hasPhoto = false
     let photoBase64 = null
+    let isScanned = false
 
-    if (fileName.endsWith('.pdf')) {
+    /* ── TXT ─────────────────────────────────────────────────── */
+    if (fileName.endsWith('.txt') || file.type === 'text/plain') {
+      text = buffer.toString('utf-8')
 
-      // ── 1. Metni çıkar (pdf-parse önce, pdf2json yedek) ──────────
+    /* ── PDF ─────────────────────────────────────────────────── */
+    } else if (fileName.endsWith('.pdf') || file.type === 'application/pdf') {
+
+      /* Deneme 1: pdf-parse */
       try {
-        const pdfParse = (await import('pdf-parse')).default
-        const result = await pdfParse(buffer)
-        text = result.text
-      } catch {
-        try {
-          const PDFParser = (await import('pdf2json')).default
-          text = await new Promise((resolve, reject) => {
-            const parser = new PDFParser()
-            parser.on('pdfParser_dataReady', (data) => {
-              let t = ''
-              ;(data.Pages || []).forEach(page => {
-                ;(page.Texts || []).forEach(tx => {
-                  ;(tx.R || []).forEach(r => {
-                    try { t += decodeURIComponent(r.T) + ' ' } catch { t += r.T + ' ' }
-                  })
-                })
-                t += '\n'
+        const raw = await import('pdf-parse')
+        const pdfParse = raw.default || raw
+        if (typeof pdfParse === 'function') {
+          const result = await pdfParse(buffer)
+          text = result.text || ''
+        }
+      } catch {}
+
+      /* Deneme 2: pdf2json (fallback veya foto tespiti için) */
+      try {
+        const PDFParser = (await import('pdf2json')).default
+        const result = await new Promise((resolve, reject) => {
+          const parser = new PDFParser()
+          parser.on('pdfParser_dataReady', resolve)
+          parser.on('pdfParser_dataError', reject)
+          parser.parseBuffer(buffer)
+        })
+        /* Metin çıkar */
+        if (!text || text.trim().length < 50) {
+          let t = ''
+          ;(result.Pages || []).forEach(page => {
+            ;(page.Texts || []).forEach(tx => {
+              ;(tx.R || []).forEach(r => {
+                try { t += decodeURIComponent(r.T) + ' ' } catch { t += (r.T || '') + ' ' }
               })
-              resolve(t)
             })
-            parser.on('pdfParser_dataError', reject)
-            parser.parseBuffer(buffer)
+            t += '\n'
           })
-        } catch {
+          if (t.trim().length > text.trim().length) text = t
+        }
+        /* Foto tespiti */
+        ;(result.Pages || []).forEach(page => {
+          ;(page.Imgs || []).forEach(img => {
+            if (img.w > 3 && img.h > 3) hasPhoto = true
+          })
+        })
+      } catch {}
+
+      /* Taranmış PDF kontrolü */
+      if (!text || text.trim().length < 30) {
+        isScanned = true
+        text = ''  // boş döndür, client uyarı gösterir
+      }
+
+    /* ── DOCX / DOC ──────────────────────────────────────────── */
+    } else if (
+      fileName.endsWith('.docx') || fileName.endsWith('.doc') ||
+      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      file.type === 'application/msword'
+    ) {
+      const mammoth = await import('mammoth')
+      const textResult = await mammoth.extractRawText({ buffer })
+      text = textResult.value || ''
+
+      /* DOCX içi görsel */
+      try {
+        const html = await mammoth.convertToHtml({ buffer })
+        const imgMatch = html.value.match(/src="data:image\/(jpeg|png|gif|webp);base64,([^"]{3000,})"/)
+        if (imgMatch) {
+          photoBase64 = `data:image/${imgMatch[1]};base64,${imgMatch[2]}`
+          hasPhoto = true
+        }
+      } catch {}
+
+    /* ── Diğer tüm dosyalar ──────────────────────────────────── */
+    } else {
+      /* UTF-8 metin olarak okumayı dene */
+      try {
+        const decoded = buffer.toString('utf-8')
+        /* Makul miktarda okunabilir karakter varsa kabul et */
+        const readableChars = decoded.replace(/[^\x20-\x7E\u00C0-\u024F\u0100-\u024F]/g, '').length
+        if (readableChars > 50) {
+          text = decoded
+        } else {
           return NextResponse.json(
-            { error: 'PDF okunamadı. Metin tabanlı bir PDF veya Word dosyası yükleyin.' },
+            { error: `"${file.name}" dosyası desteklenmiyor. PDF, Word (.docx) veya metin (.txt) dosyası yükleyin.` },
             { status: 400 }
           )
         }
+      } catch {
+        return NextResponse.json(
+          { error: 'Dosya okunamadı. PDF, Word veya metin dosyası yükleyin.' },
+          { status: 400 }
+        )
       }
-
-      // ── 2. PDF içinde fotoğraf var mı? (pdf2json Imgs kontrolü) ──
-      try {
-        const PDFParser = (await import('pdf2json')).default
-        await new Promise((resolve) => {
-          const parser = new PDFParser()
-          parser.on('pdfParser_dataReady', (data) => {
-            const pages = data.Pages || []
-            for (const page of pages) {
-              const imgs = page.Imgs || []
-              // Makul boyutta bir resim varsa (CV fotosu genellikle w>3 h>3)
-              const cvPhoto = imgs.find(img => img.w > 3 && img.h > 3)
-              if (cvPhoto) { hasPhoto = true; break }
-            }
-            resolve()
-          })
-          parser.on('pdfParser_dataError', resolve) // hata olursa skip
-          parser.parseBuffer(buffer)
-        })
-      } catch { /* sessizce geç */ }
-
-    } else if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
-
-      const mammoth = await import('mammoth')
-
-      // ── Metin çıkar ──
-      const textResult = await mammoth.extractRawText({ buffer })
-      text = textResult.value
-
-      // ── DOCX içindeki ilk görseli çıkarmayı dene ──
-      try {
-        const raw = await mammoth.convertToHtml({ buffer })
-        // mammoth HTML'de base64 img var mı?
-        const imgMatch = raw.value.match(/src="data:image\/(jpeg|png|gif);base64,([^"]+)"/)
-        if (imgMatch) {
-          const mime  = imgMatch[1]
-          const b64   = imgMatch[2]
-          // Makul boyut kontrolü (küçük ikonlar olmasın)
-          if (b64.length > 5000) {
-            photoBase64 = `data:image/${mime};base64,${b64}`
-            hasPhoto = true
-          }
-        }
-      } catch { /* görsel yoksa sorun değil */ }
-
-    } else {
-      return NextResponse.json(
-        { error: 'Sadece PDF veya Word dosyası yükleyebilirsiniz (.pdf, .doc, .docx)' },
-        { status: 400 }
-      )
     }
 
-    // ── 3. Metni temizle ──────────────────────────────────────────
+    /* ── Metin temizle ───────────────────────────────────────── */
     text = text
       .replace(/[ \t]+/g, ' ')
       .replace(/(\r\n|\r|\n){3,}/g, '\n\n')
       .trim()
 
-    if (!text || text.length < 20) {
+    /* Taranmış PDF */
+    if (isScanned) {
+      return NextResponse.json({
+        success: false,
+        isScanned: true,
+        error: 'Bu PDF görsel tabanlı (taranmış) görünüyor ve metin çıkarılamıyor. Bilgilerinizi manuel olarak yazabilir veya metin içeren bir PDF yükleyebilirsiniz.',
+      })
+    }
+
+    if (!text || text.length < 10) {
       return NextResponse.json(
-        { error: 'Dosyadan metin okunamadı. Taranmış PDF olabilir. Metin tabanlı dosya yükleyin.' },
+        { error: 'Dosyadan metin okunamadı.' },
         { status: 400 }
       )
     }
 
-    return NextResponse.json({
-      success: true,
-      text,
-      hasPhoto,
-      photoBase64,  // DOCX'tan çıkarıldıysa dolu, PDF'te null
-    })
+    return NextResponse.json({ success: true, text, hasPhoto, photoBase64 })
 
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
