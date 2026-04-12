@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -12,11 +12,18 @@ export default function LoginPage() {
   const [success, setSuccess] = useState(false)
   const router = useRouter()
 
+  // Zaten giriş yapmışsa dashboard'a at
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.replace('/dashboard')
+    })
+  }, [])
+
   const handleGoogleLogin = async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'https://resumind.com.tr/dashboard'
+        redirectTo: `${window.location.origin}/dashboard`
       }
     })
   }
@@ -31,25 +38,22 @@ export default function LoginPage() {
         email,
         password,
         options: {
-          emailRedirectTo: 'https://resumind.com.tr/dashboard'
+          emailRedirectTo: `${window.location.origin}/dashboard`
         }
       })
       if (error) setError(error.message)
-      else {
-        setSuccess(true)
-      
-      }
-
+      else setSuccess(true)
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         if (error.message === 'Email not confirmed') {
           setError('Email adresinizi doğrulamadınız. Lütfen emailinizi kontrol edin.')
         } else {
           setError('Email veya şifre hatalı.')
         }
+      } else if (data.session) {
+        router.replace('/dashboard')
       }
-      else router.push('/dashboard')
     }
     setLoading(false)
   }
@@ -119,6 +123,7 @@ export default function LoginPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
           className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 mb-3 outline-none focus:ring-2 focus:ring-blue-500"
         />
         <input
@@ -126,6 +131,7 @@ export default function LoginPage() {
           placeholder="Şifre (en az 6 karakter)"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
           className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 mb-4 outline-none focus:ring-2 focus:ring-blue-500"
         />
 
@@ -144,8 +150,8 @@ export default function LoginPage() {
 
         <button
           onClick={handleSubmit}
-          disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl transition-all"
+          disabled={loading || !email || !password}
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-3 rounded-xl transition-all"
         >
           {loading ? 'Yükleniyor...' : isRegister ? 'Kayıt Ol' : 'Giriş Yap'}
         </button>
