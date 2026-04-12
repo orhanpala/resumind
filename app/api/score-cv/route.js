@@ -6,18 +6,46 @@ export async function POST(request) {
   try {
     const { cvData } = await request.json()
 
-    const prompt = `Sen profesyonel bir CV uzmanısın. Aşağıdaki CV'yi değerlendir ve 100 üzerinden puan ver. 
+    // photo base64 alanı çok büyük — skorlama için gerekli değil, çıkar
+    const { photo, ...dataWithoutPhoto } = cvData || {}
 
-CV Bilgileri:
-${JSON.stringify(cvData, null, 2)}
+    // Her alanı kısalt — token limitini aşmamak için
+    const slim = {
+      name:       (dataWithoutPhoto.name        || '').slice(0, 80),
+      email:      (dataWithoutPhoto.email       || '').slice(0, 80),
+      phone:      (dataWithoutPhoto.phone       || '').slice(0, 30),
+      location:   (dataWithoutPhoto.location    || '').slice(0, 60),
+      summary:    (dataWithoutPhoto.summary     || '').slice(0, 400),
+      skills:      dataWithoutPhoto.skills?.slice(0, 20) || [],
+      experience: (dataWithoutPhoto.experience  || []).slice(0, 5).map(e => ({
+        company:     (e.company    || '').slice(0, 60),
+        position:    (e.position   || '').slice(0, 60),
+        duration:    (e.duration   || '').slice(0, 30),
+        description: (e.description|| '').slice(0, 200),
+      })),
+      education: (dataWithoutPhoto.education || []).slice(0, 3).map(e => ({
+        school: (e.school || '').slice(0, 60),
+        degree: (e.degree || '').slice(0, 60),
+        year:   (e.year   || '').slice(0, 20),
+      })),
+    }
+
+    const prompt = `Sen profesyonel bir CV uzmanısın. Aşağıdaki CV'yi değerlendir ve 100 üzerinden puan ver.
+
+CV:
+Ad: ${slim.name}
+Özet: ${slim.summary}
+Beceriler: ${slim.skills.join(', ')}
+Deneyimler: ${slim.experience.map(e=>`${e.position} @ ${e.company} (${e.duration}): ${e.description}`).join(' | ')}
+Eğitim: ${slim.education.map(e=>`${e.school} - ${e.degree} ${e.year}`).join(' | ')}
 
 Şu kriterlere göre değerlendir:
-1. İçerik zenginliği (0-25 puan)
-2. Profesyonellik (0-25 puan)
-3. Beceri çeşitliliği (0-25 puan)
-4. Deneyim yeterliliği (0-25 puan)
+1. İçerik zenginliği (0-25)
+2. Profesyonellik (0-25)
+3. Beceri çeşitliliği (0-25)
+4. Deneyim yeterliliği (0-25)
 
-Sadece JSON formatında döndür, başka hiçbir şey yazma:
+SADECE JSON döndür:
 {
   "totalScore": 85,
   "contentScore": 20,
@@ -25,15 +53,15 @@ Sadece JSON formatında döndür, başka hiçbir şey yazma:
   "skillsScore": 18,
   "experienceScore": 25,
   "strengths": ["güçlü yön 1", "güçlü yön 2", "güçlü yön 3"],
-  "improvements": ["geliştirilecek alan 1", "geliştirilecek alan 2", "geliştirilecek alan 3"],
-  "summary": "Genel değerlendirme özeti buraya"
+  "improvements": ["öneri 1", "öneri 2", "öneri 3"],
+  "summary": "Genel değerlendirme"
 }`
 
     const completion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: 'llama-3.3-70b-versatile',
       temperature: 0.3,
-      max_tokens: 1000,
+      max_tokens: 600,
     })
 
     const responseText = completion.choices[0].message.content
