@@ -9,15 +9,17 @@ const supabaseAdmin = createClient(
 
 export async function POST(request) {
   try {
-    const { cvContent, template, isRawText } = await request.json()
+    const { cvContent, template, isRawText, improveContent = true } = await request.json()
 
-    const prompt = isRawText
-      ? `Sen profesyonel bir CV uzmanısın. Kullanıcı aşağıdaki ham bilgileri verdi. Bu bilgileri kullanarak profesyonel ve etkileyici bir CV oluştur. Eksik bilgileri mevcut bilgilerin ruhuna uygun şekilde tamamla. Sadece JSON formatında döndür, başka hiçbir şey yazma.
+    let prompt
 
-Kullanıcının verdiği bilgiler:
+    if (isRawText) {
+      prompt = `Sen profesyonel bir CV uzmanısın. Kullanıcı aşağıdaki ham bilgileri verdi. Profesyonel ve etkileyici bir CV oluştur. Eksik bilgileri mevcut bilgilerin ruhuna uygun şekilde tamamla. Sadece JSON döndür.
+
+Bilgiler:
 ${cvContent}
 
-Şu JSON formatında döndür:
+JSON:
 {
   "name": "Ad Soyad",
   "email": "email@example.com",
@@ -28,18 +30,21 @@ ${cvContent}
   "education": [{"school": "okul", "degree": "bölüm/derece", "year": "yıl"}],
   "skills": ["beceri1", "beceri2", "beceri3"]
 }`
-      : `Sen profesyonel bir CV uzmanısın. Aşağıdaki metin bir PDF'den otomatik çıkarılmıştır — sıralama bozuk, bazı kelimeler dağınık veya tekrar eden olabilir. Bu ham metinden CV bilgilerini akıllıca ayıkla ve ${template} şablonuna uygun, profesyonel bir CV oluştur.
 
-ÖNEMLİ KURALLAR:
-- Metinde karışık bile olsa isim, email, telefon, şehir, deneyim, eğitim ve becerileri doğru tespit et
-- Tekrar eden veya anlamsız kısımları yoksay
-- Eksik alanları boş string olarak bırak ("")
-- Sadece JSON döndür, başka hiçbir şey yazma
+    } else if (improveContent) {
+      prompt = `Sen profesyonel bir CV uzmanısın. Aşağıdaki metin bir CV dosyasından otomatik çıkarılmıştır. Metindeki bilgileri ayıkla, ${template} şablonuna uygun şekilde yeniden yaz ve profesyonel hale getir.
 
-Ham CV metni:
+ÖNEMLİ:
+- Metin dağınık veya tekrar içerebilir, doğru bilgileri ayıkla
+- Özeti 3-4 güçlü, etkileyici cümleyle yaz
+- Deneyim açıklamalarını eylem fiilleriyle geliştir
+- Eksik alanları boş string ("") olarak bırak
+- SADECE JSON döndür
+
+Ham metin:
 ${cvContent}
 
-JSON formatı:
+JSON:
 {
   "name": "Ad Soyad",
   "email": "email",
@@ -51,10 +56,34 @@ JSON formatı:
   "skills": ["beceri1", "beceri2"]
 }`
 
+    } else {
+      prompt = `Sen bir CV veri çıkarma asistanısın. Aşağıdaki metin bir CV dosyasından çıkarılmıştır. Metindeki bilgileri OLDUĞU GİBİ çıkar, hiçbir şeyi değiştirme veya geliştirme.
+
+ÖNEMLİ:
+- Orijinal ifadeleri koru, ekleme yapma
+- Bulamadığın alanları boş string ("") olarak bırak
+- SADECE JSON döndür
+
+Ham metin:
+${cvContent}
+
+JSON:
+{
+  "name": "Ad Soyad",
+  "email": "email",
+  "phone": "telefon",
+  "location": "şehir",
+  "summary": "özet (orijinal haliyle)",
+  "experience": [{"company": "şirket", "position": "pozisyon", "duration": "süre", "description": "açıklama (orijinal)"}],
+  "education": [{"school": "okul", "degree": "bölüm", "year": "yıl"}],
+  "skills": ["beceri1", "beceri2"]
+}`
+    }
+
     const completion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: 'llama-3.3-70b-versatile',
-      temperature: 0.7,
+      temperature: improveContent ? 0.7 : 0.2,
       max_tokens: 2000,
     })
 
@@ -71,7 +100,7 @@ JSON formatı:
           await supabaseAdmin.from('activity_logs').insert({
             user_id: user.id,
             action: 'CV Oluşturuldu',
-            details: `${template} şablonu kullanıldı`
+            details: `${template} şablonu kullanıldı${improveContent ? '' : ' (ham)'}`
           })
         }
       }
