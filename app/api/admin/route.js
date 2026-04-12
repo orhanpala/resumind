@@ -5,30 +5,27 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-const ADMIN_EMAIL = 'palaorhan30@gmail.com'
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL
 
 export async function GET(request) {
   try {
     const authHeader = request.headers.get('authorization')
-    if (!authHeader) return Response.json({ error: 'Auth header yok' }, { status: 401 })
+    if (!authHeader) return Response.json({ error: 'Yetkisiz erişim' }, { status: 401 })
 
     const token = authHeader.replace('Bearer ', '').trim()
-    if (!token) return Response.json({ error: 'Token yok' }, { status: 401 })
+    if (!token) return Response.json({ error: 'Yetkisiz erişim' }, { status: 401 })
 
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
 
-    if (userError) return Response.json({ error: 'Token hatası: ' + userError.message }, { status: 401 })
-    if (!user) return Response.json({ error: 'Kullanıcı bulunamadı' }, { status: 401 })
-    // Debug: email kontrolü geçici kapalı
-    
-    if (user.email !== ADMIN_EMAIL) return Response.json({ error: `Yetkisiz email: ${user.email} !== ${ADMIN_EMAIL}` }, { status: 401 })
-
+    if (userError) return Response.json({ error: 'Yetkisiz erişim' }, { status: 401 })
+    if (!user) return Response.json({ error: 'Yetkisiz erişim' }, { status: 401 })
+    if (user.email !== ADMIN_EMAIL) return Response.json({ error: 'Yetkisiz erişim' }, { status: 401 })
 
     const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers()
-    if (listError) return Response.json({ error: 'Liste hatası: ' + listError.message }, { status: 500 })
+    if (listError) return Response.json({ error: 'Bir hata oluştu' }, { status: 500 })
 
     return Response.json({ success: true, users })
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 })
+    return Response.json({ error: 'Bir hata oluştu' }, { status: 500 })
   }
 }
