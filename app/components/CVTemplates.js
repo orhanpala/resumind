@@ -23,9 +23,10 @@ export function ModernCV({ cvData, color = 'blue' }) {
     <div id="cv-preview" className="bg-white rounded-2xl shadow-2xl overflow-hidden">
       <div className={`bg-gradient-to-r ${c.gradient} px-10 py-8`}>
         <div className="flex items-center gap-6">
-          <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-white text-xl font-bold shrink-0 border-2 border-white border-opacity-40">
-            {initials}
-          </div>
+          {cvData.photo
+            ? <img src={cvData.photo} alt="Profil" className="w-16 h-16 rounded-full object-cover shrink-0 border-2 border-white border-opacity-60" />
+            : <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-white text-xl font-bold shrink-0 border-2 border-white border-opacity-40">{initials}</div>
+          }
           <div className="flex-1">
             <h2 className="text-white text-3xl font-bold">{cvData.name || 'Adınız Soyadınız'}</h2>
             {cvData.experience?.[0] && <p className="text-white text-opacity-80 text-sm mt-1 opacity-80">{cvData.experience[0].position}</p>}
@@ -213,9 +214,10 @@ export function TimelineCV({ cvData, color = 'blue' }) {
   return (
     <div id="cv-preview" className="bg-white rounded-2xl shadow-2xl overflow-hidden">
       <div className={`bg-gradient-to-r ${c.gradient} px-10 py-8 flex items-center gap-6`}>
-        <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-white text-xl font-bold shrink-0">
-          {initials}
-        </div>
+        {cvData.photo
+          ? <img src={cvData.photo} alt="Profil" className="w-16 h-16 rounded-full object-cover shrink-0 border-2 border-white border-opacity-60" />
+          : <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-white text-xl font-bold shrink-0">{initials}</div>
+        }
         <div>
           <h2 className="text-white text-3xl font-bold">{cvData.name || 'Adınız Soyadınız'}</h2>
           {cvData.experience?.[0] && <p className="text-white opacity-80 text-sm mt-1">{cvData.experience[0].position}</p>}
@@ -289,9 +291,10 @@ export function SidebarCV({ cvData, color = 'blue' }) {
   return (
     <div id="cv-preview" className="bg-white rounded-2xl shadow-2xl overflow-hidden flex">
       <div className="w-2/5 bg-slate-800 p-8 flex flex-col">
-        <div className={`w-20 h-20 ${c.badge} rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4`}>
-          {initials}
-        </div>
+        {cvData.photo
+          ? <img src={cvData.photo} alt="Profil" className="w-20 h-20 rounded-full object-cover mx-auto mb-4 border-2 border-white border-opacity-30" />
+          : <div className={`w-20 h-20 ${c.badge} rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4`}>{initials}</div>
+        }
         <h2 className="text-white text-xl font-bold text-center mb-1">{cvData.name || 'Adınız Soyadınız'}</h2>
         {cvData.experience?.[0] && <p className={`${c.text} text-xs text-center mb-4`} style={{color: '#5eead4'}}>{cvData.experience[0].position}</p>}
         <div className="space-y-2 mb-6">
@@ -363,9 +366,10 @@ export function BantCV({ cvData, color = 'red' }) {
       <div className={`h-2 ${c.primary}`}></div>
       <div className="px-10 py-8 border-b border-gray-100">
         <div className="flex items-center gap-6">
-          <div className={`w-16 h-16 ${c.light} rounded-full flex items-center justify-center ${c.text} text-xl font-bold shrink-0 border-2`}>
-            {initials}
-          </div>
+          {cvData.photo
+            ? <img src={cvData.photo} alt="Profil" className="w-16 h-16 rounded-full object-cover shrink-0 border-2 border-gray-200" />
+            : <div className={`w-16 h-16 ${c.light} rounded-full flex items-center justify-center ${c.text} text-xl font-bold shrink-0 border-2`}>{initials}</div>
+          }
           <div className="flex-1">
             <h2 className="text-gray-900 text-3xl font-bold">{cvData.name || 'Adınız Soyadınız'}</h2>
             {cvData.experience?.[0] && <p className={`${c.text} text-sm mt-1 font-medium`}>{cvData.experience[0].position}</p>}
@@ -444,9 +448,10 @@ export function KartliCV({ cvData, color = 'purple' }) {
   return (
     <div id="cv-preview" className="bg-gray-100 rounded-2xl shadow-2xl p-6">
       <div className="bg-white rounded-xl p-6 mb-4 flex items-center gap-4 shadow-sm">
-        <div className={`w-16 h-16 ${c.badge} rounded-xl flex items-center justify-center text-white text-xl font-bold shrink-0`}>
-          {initials}
-        </div>
+        {cvData.photo
+          ? <img src={cvData.photo} alt="Profil" className="w-16 h-16 rounded-xl object-cover shrink-0" />
+          : <div className={`w-16 h-16 ${c.badge} rounded-xl flex items-center justify-center text-white text-xl font-bold shrink-0`}>{initials}</div>
+        }
         <div className="flex-1">
           <h2 className="text-gray-900 text-2xl font-bold">{cvData.name || 'Adınız Soyadınız'}</h2>
           {cvData.experience?.[0] && <p className={`${c.text} text-sm font-medium`}>{cvData.experience[0].position}</p>}
