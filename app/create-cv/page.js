@@ -1,74 +1,58 @@
 'use client'
-import { useState, Suspense, useEffect, useRef, useCallback } from 'react'
+import { useState, Suspense, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import { CVComponents, colorOptions } from '../components/CVTemplates'
-import LoadingAnimation from '../components/LoadingAnimation'
 
 const emptyCV = { name:'',email:'',phone:'',location:'',summary:'',experience:[],education:[],skills:[] }
 
-/* Fotoğrafı kırp + filtre uygula ve base64 döndür */
-async function processPhoto(src, filters) {
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
+const defaultFilters = { brightness:100, contrast:100, saturation:100, shape:'circle', preset:'normal' }
+
+const PRESETS = [
+  { id:'normal', label:'Normal', css:'' },
+  { id:'bw',     label:'S&B',   css:'grayscale(100%)' },
+  { id:'sepia',  label:'Sepya', css:'sepia(80%)' },
+  { id:'warm',   label:'Sıcak', css:'sepia(30%) saturate(140%)' },
+  { id:'cool',   label:'Soğuk', css:'hue-rotate(20deg) saturate(90%)' },
+]
+const SHAPES = [
+  { id:'circle',  label:'Daire',    cls:'rounded-full' },
+  { id:'rounded', label:'Yuvarlak', cls:'rounded-2xl'  },
+  { id:'square',  label:'Kare',     cls:'rounded-none' },
+]
+
+async function bakePhoto(src, f) {
+  return new Promise(resolve => {
+    const img = new Image(); img.crossOrigin = 'anonymous'
     img.onload = () => {
       const OUT = 300
-      const canvas = document.createElement('canvas')
-      canvas.width = OUT; canvas.height = OUT
-      const ctx = canvas.getContext('2d')
-
-      // CSS filter string
-      let filterStr = `brightness(${filters.brightness}%) contrast(${filters.contrast}%) saturate(${filters.saturation}%)`
-      if (filters.preset === 'bw')    filterStr += ' grayscale(100%)'
-      if (filters.preset === 'sepia') filterStr += ' sepia(80%)'
-      if (filters.preset === 'warm')  filterStr += ' sepia(30%) saturate(140%)'
-      if (filters.preset === 'cool')  filterStr += ' hue-rotate(20deg) saturate(90%)'
-      ctx.filter = filterStr
-
-      // Şekil kırpma
-      if (filters.shape === 'circle') {
-        ctx.beginPath(); ctx.arc(OUT/2, OUT/2, OUT/2, 0, Math.PI*2); ctx.clip()
-      } else if (filters.shape === 'rounded') {
-        ctx.beginPath()
-        ctx.roundRect(0, 0, OUT, OUT, 50)
-        ctx.clip()
-      }
-
-      // Kare kırpma (üst-orta)
+      const cv  = document.createElement('canvas')
+      cv.width = OUT; cv.height = OUT
+      const ctx = cv.getContext('2d')
+      let css = `brightness(${f.brightness}%) contrast(${f.contrast}%) saturate(${f.saturation}%)`
+      if (f.preset === 'bw')    css += ' grayscale(100%)'
+      if (f.preset === 'sepia') css += ' sepia(80%)'
+      if (f.preset === 'warm')  css += ' sepia(30%) saturate(140%)'
+      if (f.preset === 'cool')  css += ' hue-rotate(20deg) saturate(90%)'
+      ctx.filter = css
+      if (f.shape === 'circle') { ctx.beginPath(); ctx.arc(OUT/2,OUT/2,OUT/2,0,Math.PI*2); ctx.clip() }
+      else if (f.shape === 'rounded') { ctx.beginPath(); ctx.roundRect(0,0,OUT,OUT,40); ctx.clip() }
       const side = Math.min(img.width, img.height)
-      const sx   = (img.width - side) / 2
-      const sy   = Math.max(0, (img.height - side) / 2 - img.height * 0.08)
-      ctx.drawImage(img, sx, sy, side, side, 0, 0, OUT, OUT)
-      resolve(canvas.toDataURL('image/jpeg', 0.92))
+      ctx.drawImage(img, (img.width-side)/2, Math.max(0,(img.height-side)/2-img.height*0.08), side, side, 0, 0, OUT, OUT)
+      resolve(cv.toDataURL('image/jpeg', 0.92))
     }
     img.onerror = () => resolve(src)
     img.src = src
   })
 }
 
-const defaultFilters = { brightness:100, contrast:100, saturation:100, shape:'circle', preset:'normal' }
-
-const PRESETS = [
-  { id:'normal', label:'Normal',  style:{} },
-  { id:'bw',     label:'S&B',     style:{ filter:'grayscale(100%)' } },
-  { id:'sepia',  label:'Sepya',   style:{ filter:'sepia(80%)' } },
-  { id:'warm',   label:'Sıcak',   style:{ filter:'sepia(30%) saturate(140%)' } },
-  { id:'cool',   label:'Soğuk',   style:{ filter:'hue-rotate(20deg) saturate(90%)' } },
-]
-
-const SHAPES = [
-  { id:'circle',  label:'Daire',    cls:'rounded-full' },
-  { id:'rounded', label:'Yuvarlak', cls:'rounded-3xl'  },
-  { id:'square',  label:'Kare',     cls:'rounded-none' },
-]
-
-const I = {
+/* ── Icons ── */
+const Ic = {
+  back:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>,
   photo:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5"><circle cx="12" cy="12" r="3"/><path strokeLinecap="round" d="M20 7h-3l-2-2H9L7 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/></svg>,
   design:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5"><path strokeLinecap="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>,
   actions: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,
   tools:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>,
-  back:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>,
   dl:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>,
   edit:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><path strokeLinecap="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>,
   share:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>,
@@ -77,26 +61,26 @@ const I = {
   globe:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>,
   ref:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>,
   li:      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>,
+  eye:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>,
 }
 
 const TABS = [
-  { id:'photo',   label:'Fotoğraf', icon:I.photo   },
-  { id:'design',  label:'Tasarım',  icon:I.design  },
-  { id:'actions', label:'Eylemler', icon:I.actions },
-  { id:'tools',   label:'Araçlar',  icon:I.tools   },
+  { id:'photo',   label:'Fotoğraf', icon:Ic.photo   },
+  { id:'design',  label:'Tasarım',  icon:Ic.design  },
+  { id:'actions', label:'Eylemler', icon:Ic.actions },
+  { id:'tools',   label:'Araçlar',  icon:Ic.tools   },
 ]
 
-function Slider({ label, value, onChange, min=0, max=200, unit='%' }) {
+function Slider({ label, value, onChange, min=0, max=200 }) {
   return (
     <div>
-      <div className="flex justify-between items-center mb-1">
+      <div className="flex justify-between mb-1">
         <span className="text-gray-400 text-xs">{label}</span>
-        <span className="text-gray-500 text-xs tabular-nums">{value}{unit}</span>
+        <span className="text-gray-500 text-xs tabular-nums">{value}%</span>
       </div>
       <input type="range" min={min} max={max} value={value}
-        onChange={e => onChange(Number(e.target.value))}
-        className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-blue-500 bg-gray-700"
-      />
+        onChange={e=>onChange(Number(e.target.value))}
+        className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-blue-500 bg-gray-700"/>
     </div>
   )
 }
@@ -112,8 +96,8 @@ function CreateCVContent() {
   const [startMode, setStartMode] = useState(isEdit ? 'done' : null)
 
   // Fotoğraf
-  const [rawPhoto, setRawPhoto]         = useState(null)   // ham yüklenen
-  const [cvPhoto, setCvPhoto]           = useState(null)   // baked final
+  const [rawPhoto, setRawPhoto]         = useState(null)
+  const [cvPhoto, setCvPhoto]           = useState(null)
   const [filters, setFilters]           = useState(defaultFilters)
   const [photoLoading, setPhotoLoading] = useState(false)
   const [applying, setApplying]         = useState(false)
@@ -124,7 +108,7 @@ function CreateCVContent() {
   const [cvData, setCvData]           = useState(null)
   const [previewData, setPreviewData] = useState(emptyCV)
 
-  // Diyalog
+  // Dialog
   const [showImproveDialog, setShowImproveDialog]   = useState(false)
   const [pendingPhotoBase64, setPendingPhotoBase64] = useState(null)
   const [pendingHasPhoto, setPendingHasPhoto]       = useState(false)
@@ -149,30 +133,31 @@ function CreateCVContent() {
   const [shareLink, setShareLink] = useState(null)
   const [sharing, setSharing]     = useState(false)
 
-  const [showMobilePreview, setShowMobilePreview] = useState(false)
+  // Mobil önizleme
+  const [showPreview, setShowPreview] = useState(false)
+
   const router = useRouter()
   const CVComponent = CVComponents[template] || CVComponents.Modern
 
-  // CSS filter preview string
-  const previewFilterStr = [
+  const previewCss = [
     `brightness(${filters.brightness}%)`,
     `contrast(${filters.contrast}%)`,
     `saturate(${filters.saturation}%)`,
-    filters.preset === 'bw'    ? 'grayscale(100%)' : '',
-    filters.preset === 'sepia' ? 'sepia(80%)'      : '',
-    filters.preset === 'warm'  ? 'sepia(30%) saturate(140%)' : '',
-    filters.preset === 'cool'  ? 'hue-rotate(20deg) saturate(90%)' : '',
+    filters.preset==='bw'    ? 'grayscale(100%)' : '',
+    filters.preset==='sepia' ? 'sepia(80%)' : '',
+    filters.preset==='warm'  ? 'sepia(30%) saturate(140%)' : '',
+    filters.preset==='cool'  ? 'hue-rotate(20deg) saturate(90%)' : '',
   ].filter(Boolean).join(' ')
 
-  const shapeClass = SHAPES.find(s => s.id === filters.shape)?.cls || 'rounded-full'
+  const shapeClass = SHAPES.find(s=>s.id===filters.shape)?.cls || 'rounded-full'
 
-  /* ── Düzenleme modu ── */
+  /* Edit mode */
   useEffect(() => {
     if (!isEdit) return
     try {
       const raw = sessionStorage.getItem('editCV')
       if (!raw) return
-      const { cvData: stored, template: tpl } = JSON.parse(raw)
+      const { cvData:stored, template:tpl } = JSON.parse(raw)
       if (stored) {
         setCvData(stored); setPreviewData(stored)
         if (stored.photo) { setRawPhoto(stored.photo); setCvPhoto(stored.photo) }
@@ -184,40 +169,38 @@ function CreateCVContent() {
     } catch {}
   }, [isEdit])
 
-  /* ── Fotoğraf yükle ── */
-  const handlePhotoFile = async (e) => {
+  /* Fotoğraf */
+  const handlePhotoFile = (e) => {
     const file = e.target.files[0]
-    if (!file || !file.type.startsWith('image/')) return alert('Lütfen bir resim seçin.')
+    if (!file || !file.type.startsWith('image/')) return alert('Lütfen resim seçin.')
     setPhotoLoading(true)
     const reader = new FileReader()
-    reader.onload = async (ev) => {
+    reader.onload = async ev => {
       const src = ev.target.result
-      setRawPhoto(src)
-      setFilters(defaultFilters)
-      const processed = await processPhoto(src, defaultFilters)
-      setCvPhoto(processed)
-      if (cvData) { const u={...cvData,photo:processed}; setCvData(u); setPreviewData(u) }
+      setRawPhoto(src); setFilters(defaultFilters)
+      const p = await bakePhoto(src, defaultFilters)
+      setCvPhoto(p)
+      if (cvData) { const u={...cvData,photo:p}; setCvData(u); setPreviewData(u) }
       setPhotoLoading(false)
     }
     reader.readAsDataURL(file)
   }
 
-  /* ── Filtreleri uygula ── */
-  const handleApplyFilters = async () => {
+  const applyFilters = async () => {
     if (!rawPhoto) return
     setApplying(true)
-    const processed = await processPhoto(rawPhoto, filters)
-    setCvPhoto(processed)
-    if (cvData) { const u={...cvData,photo:processed}; setCvData(u); setPreviewData(u) }
+    const p = await bakePhoto(rawPhoto, filters)
+    setCvPhoto(p)
+    if (cvData) { const u={...cvData,photo:p}; setCvData(u); setPreviewData(u) }
     setApplying(false)
   }
 
-  const setFilter = (key, val) => setFilters(f => ({ ...f, [key]: val }))
+  const removePhoto = () => {
+    setRawPhoto(null); setCvPhoto(null); setFilters(defaultFilters)
+    if (cvData) { const u={...cvData}; delete u.photo; setCvData(u); setPreviewData(u) }
+  }
 
-  /* ── Dosya yükle ── */
-  const handleChooseUpload = () => { setStartMode('upload'); setTimeout(() => fileInputRef.current?.click(), 50) }
-  const handleChooseText   = () => setStartMode('text')
-
+  /* Dosya yükleme */
   const handleFileUpload = async (e) => {
     const file = e.target.files[0]; if (!file) { setStartMode(null); return }
     const fd = new FormData(); fd.append('file', file)
@@ -227,8 +210,8 @@ function CreateCVContent() {
       if (data.isScanned) { alert(data.error); setStartMode('text'); return }
       if (!data.success)  { alert('Dosya okunamadı: '+data.error); setStartMode(null); return }
       setCvText(data.text)
-      setPendingHasPhoto(data.hasPhoto || false)
-      setPendingPhotoBase64(data.photoBase64 || null)
+      setPendingHasPhoto(data.hasPhoto||false)
+      setPendingPhotoBase64(data.photoBase64||null)
       setShowImproveDialog(true)
     } catch { alert('Bir hata oluştu'); setStartMode(null) }
   }
@@ -237,8 +220,8 @@ function CreateCVContent() {
     setShowImproveDialog(false)
     if (pendingPhotoBase64) {
       setRawPhoto(pendingPhotoBase64)
-      const p = await processPhoto(pendingPhotoBase64, defaultFilters)
-      setCvPhoto(p)
+      const p = await bakePhoto(pendingPhotoBase64, defaultFilters).catch(()=>null)
+      if (p) setCvPhoto(p)
     }
     await generateCV(improve)
   }
@@ -247,7 +230,7 @@ function CreateCVContent() {
     if (!cvText) return
     setLoading(true)
     try {
-      const { data:{ session } } = await supabase.auth.getSession()
+      const { data:{session} } = await supabase.auth.getSession()
       const res  = await fetch('/api/generate-cv', {
         method:'POST',
         headers:{ 'Content-Type':'application/json', 'authorization':`Bearer ${session?.access_token||''}` },
@@ -255,29 +238,29 @@ function CreateCVContent() {
       })
       const data = await res.json()
       if (data.success) {
-        const photo = cvPhoto || (pendingPhotoBase64 ? await processPhoto(pendingPhotoBase64, defaultFilters).catch(()=>null) : undefined)
+        const photo = cvPhoto || (pendingPhotoBase64 ? await bakePhoto(pendingPhotoBase64, defaultFilters).catch(()=>null) : undefined)
         const newCV = { ...data.cvData, photo:photo||undefined }
         setCvData(newCV); setPreviewData(newCV); setStartMode('done')
-        const { data:{ user } } = await supabase.auth.getUser()
+        const { data:{user} } = await supabase.auth.getUser()
         if (user) await supabase.from('cvs').insert({ user_id:user.id, template, cv_data:newCV })
-        setShowMobilePreview(true); setActiveTab('actions')
+        setShowPreview(true); setActiveTab('actions')
       } else alert('Hata: '+data.error)
     } catch { alert('Bir hata oluştu') }
     setLoading(false)
   }
 
-  const handleDownloadPDF = () => {
+  const downloadPDF = () => {
     const el = document.getElementById('cv-preview')
     if (!el) return alert('Önce CV oluşturun.')
     const styles = Array.from(document.styleSheets).map(s=>{try{return Array.from(s.cssRules).map(r=>r.cssText).join('\n')}catch{return ''}}).join('\n')
     const win = window.open('','_blank','width=900,height=700')
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${previewData.name||'CV'} - Resumind</title>
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${cvData?.name||'CV'} - Resumind</title>
       <style>${styles}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}body{margin:0;padding:0;background:white;}@page{margin:0;size:A4;}</style>
       </head><body>${el.outerHTML}<script>window.onload=function(){setTimeout(function(){window.print();window.close();},600)}<\/script></body></html>`)
     win.document.close()
   }
 
-  const handleTranslate = async (lang) => {
+  const translate = async (lang) => {
     if (!cvData) return; setTranslating(true)
     try {
       const res  = await fetch('/api/translate-cv',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cvData,targetLanguage:lang==='en'?'İngilizce':'Türkçe'})})
@@ -288,41 +271,41 @@ function CreateCVContent() {
     setTranslating(false)
   }
 
-  const handleScoreCV = async () => {
+  const scoreCV = async () => {
     if (!cvData) return; setScoring(true)
     try {
       const res  = await fetch('/api/score-cv',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cvData})})
       const data = await res.json()
       if (data.success) setScoreData(data.scoreData); else alert('Hata: '+data.error)
-    } catch { alert('Bir hata oluştu') }
+    } catch { alert('Hata oluştu') }
     setScoring(false)
   }
 
-  const handleLinkedin = async () => {
+  const linkedin = async () => {
     if (!cvData) return; setGeneratingLinkedin(true)
     try {
       const res  = await fetch('/api/linkedin-summary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cvData})})
       const data = await res.json()
       if (data.success) setLinkedinSummary(data.summary); else alert('Hata: '+data.error)
-    } catch { alert('Bir hata oluştu') }
+    } catch { alert('Hata oluştu') }
     setGeneratingLinkedin(false)
   }
 
-  const handleReference = async () => {
+  const reference = async () => {
     if (!cvData||!referenceInfo.refName) return; setGeneratingReference(true)
     try {
       const res  = await fetch('/api/reference-letter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cvData,referenceInfo})})
       const data = await res.json()
       if (data.success) { setReferenceLetter(data.letter); setShowReferenceForm(false) } else alert('Hata: '+data.error)
-    } catch { alert('Bir hata oluştu') }
+    } catch { alert('Hata oluştu') }
     setGeneratingReference(false)
   }
 
-  const handleShare = async () => {
+  const shareCV = async () => {
     if (!cvData) return; setSharing(true)
     try {
       const shareId = Math.random().toString(36).substring(2,10)
-      const { data:{ user } } = await supabase.auth.getUser()
+      const { data:{user} } = await supabase.auth.getUser()
       if (user) {
         const { data:ex } = await supabase.from('cvs').select('id').eq('user_id',user.id).eq('template',template).order('created_at',{ascending:false}).limit(1).single()
         if (ex) await supabase.from('cvs').update({share_id:shareId,is_shared:true}).eq('id',ex.id)
@@ -332,152 +315,136 @@ function CreateCVContent() {
     setSharing(false)
   }
 
-  const handleEditSave = () => {
-    const n = { ...JSON.parse(JSON.stringify(editData)), photo:cvPhoto||undefined }
+  const saveEdit = () => {
+    const n = {...JSON.parse(JSON.stringify(editData)), photo:cvPhoto||undefined}
     setCvData(n); setPreviewData(n); setEditMode(false)
   }
 
   const resetAll = () => {
-    setCvData(null); setPreviewData(emptyCV)
+    setCvData(null); setPreviewData(emptyCV); setStartMode(null)
     setScoreData(null); setLinkedinSummary(null); setReferenceLetter(null)
-    setEditMode(false); setCvText(''); setShowMobilePreview(false)
+    setEditMode(false); setCvText(''); setShowPreview(false)
     setShowImproveDialog(false); setPendingPhotoBase64(null); setPendingHasPhoto(false)
-    setStartMode(null); setActiveTab('photo')
+    setActiveTab('photo')
   }
 
-  /* ════════════════════ PANELLER ════════════════════ */
-  const panels = {
-
-    /* ── FOTOĞRAF ── */
-    photo: (
-      <div className="space-y-4">
-        {/* Önizleme */}
-        <div className="flex justify-center">
-          <div className={`w-28 h-28 overflow-hidden bg-gray-800 border-2 border-gray-700 flex items-center justify-center ${shapeClass}`}>
-            {photoLoading
-              ? <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"/>
-              : rawPhoto
-                ? <img src={rawPhoto} alt="Önizleme" className="w-full h-full object-cover" style={{ filter: previewFilterStr }}/>
-                : <svg viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth={1.5} className="w-10 h-10"><path strokeLinecap="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-            }
-          </div>
-        </div>
-
-        {/* Yükle butonu */}
-        <label className="w-full flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-blue-500 text-white text-sm px-4 py-2.5 rounded-xl cursor-pointer transition-all">
-          {rawPhoto ? '📷 Fotoğrafı Değiştir' : '📷 Fotoğraf Yükle'}
-          <input type="file" accept="image/*" className="hidden" onChange={handlePhotoFile}/>
-        </label>
-        {rawPhoto && <button onClick={()=>{ setRawPhoto(null); setCvPhoto(null); setFilters(defaultFilters); if(cvData){const u={...cvData};delete u.photo;setCvData(u);setPreviewData(u)} }} className="w-full text-red-400 text-xs hover:text-red-300 py-1">× Fotoğrafı Kaldır</button>}
-
-        {rawPhoto && (
-          <>
-            <hr className="border-gray-800"/>
-
-            {/* Şekil */}
-            <div>
-              <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Şekil</p>
-              <div className="grid grid-cols-3 gap-1.5">
-                {SHAPES.map(s => (
-                  <button key={s.id} onClick={() => setFilter('shape', s.id)}
-                    className={`py-2 text-xs rounded-lg transition-all border ${filters.shape===s.id?'bg-blue-600 border-blue-500 text-white':'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600 hover:text-white'}`}>
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Filtre presetleri */}
-            <div>
-              <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Filtre</p>
-              <div className="grid grid-cols-5 gap-1.5">
-                {PRESETS.map(p => (
-                  <button key={p.id} onClick={() => setFilter('preset', p.id)}
-                    className={`flex flex-col items-center gap-1.5 p-1.5 rounded-xl border transition-all ${filters.preset===p.id?'border-blue-500 bg-blue-600/10':'border-gray-700 bg-gray-800 hover:border-gray-600'}`}>
-                    <div className={`w-9 h-9 rounded-lg overflow-hidden flex-shrink-0`}>
-                      <img src={rawPhoto} className="w-full h-full object-cover" style={p.style} alt=""/>
-                    </div>
-                    <span className={`text-xs leading-none ${filters.preset===p.id?'text-blue-400':'text-gray-500'}`}>{p.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Sliderlar */}
-            <div className="space-y-3">
-              <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Ayarlar</p>
-              <Slider label="Parlaklık"  value={filters.brightness}  onChange={v=>setFilter('brightness',v)} />
-              <Slider label="Kontrast"   value={filters.contrast}    onChange={v=>setFilter('contrast',v)} />
-              <Slider label="Doygunluk" value={filters.saturation}  onChange={v=>setFilter('saturation',v)} />
-            </div>
-
-            {/* Sıfırla + Uygula */}
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setFilters(f => ({...f, brightness:100, contrast:100, saturation:100, preset:'normal'}))}
-                className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white text-xs py-2 rounded-xl border border-gray-700 transition-all">
-                ↺ Sıfırla
-              </button>
-              <button onClick={handleApplyFilters} disabled={applying}
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs py-2 rounded-xl transition-all font-medium">
-                {applying ? 'Uygulanıyor...' : '✓ CV\'ye Uygula'}
-              </button>
-            </div>
-            {cvPhoto && <p className="text-green-400 text-xs text-center">✅ Fotoğraf CV'ye eklendi</p>}
-          </>
-        )}
-
-        {!rawPhoto && <p className="text-gray-600 text-xs text-center leading-relaxed pt-2">Fotoğraf yükledikten sonra parlaklık, kontrast, filtre ve şekil seçenekleri aktif olur.</p>}
-      </div>
-    ),
-
-    /* ── TASARIM ── */
-    design: (
-      <div className="space-y-5">
-        <div>
-          <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2.5">Şablon</p>
-          <div className="flex flex-wrap gap-1.5">
-            {Object.keys(CVComponents).map(t => (
-              <button key={t} onClick={()=>setTemplate(t)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${template===t?'bg-blue-600 text-white':'bg-gray-800/80 text-gray-400 hover:bg-gray-700 hover:text-white border border-gray-700/50'}`}>
-                {t}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2.5">Renk</p>
-          <div className="flex gap-3">
-            {colorOptions.map(c => (
-              <button key={c.id} onClick={()=>setColor(c.id)} title={c.label}
-                className={`w-8 h-8 rounded-full border-2 transition-all ${color===c.id?'border-white scale-110 shadow-lg':'border-gray-700 opacity-60 hover:opacity-90 hover:scale-105'}`}
-                style={{backgroundColor:c.hex}}/>
-            ))}
-          </div>
+  /* ─── Panel içerikleri ─── */
+  const photoPanel = (
+    <div className="space-y-4">
+      {/* Önizleme dairesi */}
+      <div className="flex justify-center py-2">
+        <div className={`w-24 h-24 overflow-hidden bg-gray-800 border-2 border-gray-700 flex items-center justify-center ${shapeClass} transition-all`}>
+          {photoLoading
+            ? <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"/>
+            : rawPhoto
+              ? <img src={rawPhoto} alt="" className="w-full h-full object-cover" style={{filter:previewCss}}/>
+              : <svg viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth={1.5} className="w-10 h-10"><path strokeLinecap="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          }
         </div>
       </div>
-    ),
 
-    /* ── EYLEMLER ── */
-    actions: (
-      <div className="space-y-2">
-        {!cvData ? (
-          <div className="text-center py-8">
-            <p className="text-gray-600 text-sm mb-2">Henüz CV oluşturulmadı</p>
-            <button onClick={resetAll} className="text-blue-400 text-xs hover:text-blue-300">← Başa dön</button>
+      <label className="w-full flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-blue-500 text-white text-sm px-4 py-2.5 rounded-xl cursor-pointer transition-all">
+        {rawPhoto ? '📷 Fotoğrafı Değiştir' : '📷 Fotoğraf Yükle'}
+        <input type="file" accept="image/*" className="hidden" onChange={handlePhotoFile}/>
+      </label>
+
+      {rawPhoto && (
+        <>
+          <button onClick={removePhoto} className="w-full text-red-400 hover:text-red-300 text-xs py-1 transition-all">× Fotoğrafı Kaldır</button>
+          <hr className="border-gray-800"/>
+
+          {/* Şekil */}
+          <div>
+            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Şekil</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {SHAPES.map(s=>(
+                <button key={s.id} onClick={()=>setFilters(f=>({...f,shape:s.id}))}
+                  className={`py-2 text-xs rounded-lg border transition-all ${filters.shape===s.id?'bg-blue-600 border-blue-500 text-white':'bg-gray-800 border-gray-700 text-gray-400 hover:text-white'}`}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </div>
-        ) : (
-          <>
-            <button onClick={handleDownloadPDF} className="w-full flex items-center gap-3 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2.5 px-4 rounded-xl transition-all font-medium">
-              {I.dl} PDF İndir
+
+          {/* Filtre presetleri */}
+          <div>
+            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Filtre</p>
+            <div className="grid grid-cols-5 gap-1">
+              {PRESETS.map(p=>(
+                <button key={p.id} onClick={()=>setFilters(f=>({...f,preset:p.id}))}
+                  className={`flex flex-col items-center gap-1 p-1.5 rounded-xl border transition-all ${filters.preset===p.id?'border-blue-500 bg-blue-600/10':'border-gray-700 bg-gray-800 hover:border-gray-600'}`}>
+                  <div className="w-8 h-8 rounded-lg overflow-hidden">
+                    <img src={rawPhoto} className="w-full h-full object-cover" style={{filter:p.css||''}} alt=""/>
+                  </div>
+                  <span className={`text-xs leading-none ${filters.preset===p.id?'text-blue-400':'text-gray-600'}`}>{p.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sliderlar */}
+          <div className="space-y-3">
+            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Ayarlar</p>
+            <Slider label="Parlaklık"  value={filters.brightness}  onChange={v=>setFilters(f=>({...f,brightness:v}))}/>
+            <Slider label="Kontrast"   value={filters.contrast}    onChange={v=>setFilters(f=>({...f,contrast:v}))}/>
+            <Slider label="Doygunluk" value={filters.saturation}  onChange={v=>setFilters(f=>({...f,saturation:v}))}/>
+          </div>
+
+          {/* Uygula */}
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={()=>setFilters(f=>({...f,brightness:100,contrast:100,saturation:100,preset:'normal'}))}
+              className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white text-xs py-2 rounded-xl border border-gray-700 transition-all">
+              ↺ Sıfırla
             </button>
-            <button onClick={()=>{ const c=JSON.parse(JSON.stringify(cvData)); setEditData(c); setEditMode(v=>!v) }}
+            <button onClick={applyFilters} disabled={applying}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs py-2 rounded-xl transition-all font-medium">
+              {applying ? 'Uygulanıyor...' : '✓ Uygula'}
+            </button>
+          </div>
+          {cvPhoto && <p className="text-green-400 text-xs text-center">✅ CV'ye uygulandı</p>}
+        </>
+      )}
+      {!rawPhoto && <p className="text-gray-600 text-xs text-center pt-2 leading-relaxed">Fotoğraf yükledikten sonra şekil, filtre ve renk ayarları aktif olur.</p>}
+    </div>
+  )
+
+  const designPanel = (
+    <div className="space-y-5">
+      <div>
+        <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2.5">Şablon</p>
+        <div className="flex flex-wrap gap-1.5">
+          {Object.keys(CVComponents).map(t=>(
+            <button key={t} onClick={()=>setTemplate(t)}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${template===t?'bg-blue-600 text-white':'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white border border-gray-700/60'}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2.5">Renk</p>
+        <div className="flex gap-3">
+          {colorOptions.map(c=>(
+            <button key={c.id} onClick={()=>setColor(c.id)} title={c.label}
+              className={`w-8 h-8 rounded-full border-2 transition-all ${color===c.id?'border-white scale-110 shadow-lg':'border-gray-700 opacity-60 hover:opacity-90 hover:scale-105'}`}
+              style={{backgroundColor:c.hex}}/>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+
+  const actionsPanel = (
+    <div className="space-y-2">
+      {!cvData
+        ? <div className="text-center py-8"><p className="text-gray-600 text-sm mb-2">Henüz CV oluşturulmadı</p><button onClick={resetAll} className="text-blue-400 text-xs hover:text-blue-300">← Başa dön</button></div>
+        : <>
+            <button onClick={downloadPDF} className="w-full flex items-center gap-3 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2.5 px-4 rounded-xl transition-all font-medium">{Ic.dl} PDF İndir</button>
+            <button onClick={()=>{const c=JSON.parse(JSON.stringify(cvData));setEditData(c);setEditMode(v=>!v)}}
               className={`w-full flex items-center gap-3 text-white text-sm py-2.5 px-4 rounded-xl transition-all ${editMode?'bg-yellow-700':'bg-yellow-600/90 hover:bg-yellow-600'}`}>
-              {I.edit} {editMode?'Düzenlemeyi Kapat':'CV\'yi Düzenle'}
+              {Ic.edit} {editMode?'Düzenlemeyi Kapat':'CV\'yi Düzenle'}
             </button>
-            <button onClick={handleShare} disabled={sharing}
-              className="w-full flex items-center gap-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm py-2.5 px-4 rounded-xl transition-all">
-              {I.share} {sharing?'Oluşturuluyor...':'CV\'yi Paylaş'}
-            </button>
+            <button onClick={shareCV} disabled={sharing} className="w-full flex items-center gap-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm py-2.5 px-4 rounded-xl transition-all">{Ic.share} {sharing?'Oluşturuluyor...':'CV\'yi Paylaş'}</button>
             {shareLink && (
               <div className="bg-gray-800/60 border border-green-800/50 rounded-xl p-3">
                 <p className="text-green-400 text-xs mb-2">✅ Link hazır!</p>
@@ -487,203 +454,165 @@ function CreateCVContent() {
                 </div>
               </div>
             )}
-            <button onClick={resetAll} className="w-full flex items-center gap-3 bg-gray-800/80 hover:bg-gray-800 text-gray-400 hover:text-white text-sm py-2.5 px-4 rounded-xl transition-all border border-gray-700/50">
-              {I.refresh} Yeniden Oluştur
-            </button>
+            <button onClick={resetAll} className="w-full flex items-center gap-3 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white text-sm py-2.5 px-4 rounded-xl transition-all border border-gray-700/50">{Ic.refresh} Yeniden Oluştur</button>
 
             {editMode && editData && (
-              <div className="mt-2 bg-gray-800/40 border border-yellow-700/40 rounded-xl p-4">
-                <p className="text-yellow-400 text-xs font-semibold uppercase tracking-wide mb-3">Bilgileri Düzenle</p>
-                <div className="space-y-2">
-                  {[['name','Ad Soyad'],['email','Email'],['phone','Telefon'],['location','Şehir']].map(([k,l])=>(
-                    <input key={k} type="text" placeholder={l} value={editData[k]||''}
-                      onChange={e=>setEditData({...editData,[k]:e.target.value})}
-                      className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 outline-none text-xs border border-gray-700/60 focus:border-yellow-600/60 placeholder-gray-600"/>
-                  ))}
-                  <textarea placeholder="Hakkımda" value={editData.summary||''}
-                    onChange={e=>setEditData({...editData,summary:e.target.value})}
-                    className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 outline-none text-xs h-16 resize-none border border-gray-700/60 placeholder-gray-600"/>
-                  <input type="text" placeholder="Beceriler (virgülle)" value={editData.skills?.join(', ')||''}
-                    onChange={e=>setEditData({...editData,skills:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})}
-                    className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 outline-none text-xs border border-gray-700/60 placeholder-gray-600"/>
-                  {editData.experience?.map((exp,i)=>(
-                    <div key={i} className="bg-gray-900/60 rounded-lg p-2.5 border border-gray-700/30">
-                      <p className="text-yellow-500/80 text-xs mb-1.5">Deneyim {i+1}</p>
-                      {[['position','Pozisyon'],['company','Şirket'],['duration','Süre']].map(([f,p])=>(
-                        <input key={f} type="text" placeholder={p} value={exp[f]||''}
-                          onChange={e=>{const n=[...editData.experience];n[i]={...n[i],[f]:e.target.value};setEditData({...editData,experience:n})}}
-                          className="w-full bg-gray-800 text-white rounded-lg px-2.5 py-1.5 mb-1 outline-none text-xs border border-gray-700/40 placeholder-gray-600"/>
-                      ))}
-                      <textarea placeholder="Açıklama" value={exp.description||''}
-                        onChange={e=>{const n=[...editData.experience];n[i]={...n[i],description:e.target.value};setEditData({...editData,experience:n})}}
-                        className="w-full bg-gray-800 text-white rounded-lg px-2.5 py-1.5 outline-none text-xs h-12 resize-none border border-gray-700/40 placeholder-gray-600"/>
-                    </div>
-                  ))}
-                  {editData.education?.map((edu,i)=>(
-                    <div key={i} className="bg-gray-900/60 rounded-lg p-2.5 border border-gray-700/30">
-                      <p className="text-yellow-500/80 text-xs mb-1.5">Eğitim {i+1}</p>
-                      {[['school','Okul'],['degree','Bölüm'],['year','Yıl']].map(([f,p])=>(
-                        <input key={f} type="text" placeholder={p} value={edu[f]||''}
-                          onChange={e=>{const n=[...editData.education];n[i]={...n[i],[f]:e.target.value};setEditData({...editData,education:n})}}
-                          className="w-full bg-gray-800 text-white rounded-lg px-2.5 py-1.5 mb-1 outline-none text-xs border border-gray-700/40 placeholder-gray-600"/>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-                <button onClick={handleEditSave} className="w-full bg-yellow-600 hover:bg-yellow-700 text-white text-xs py-2.5 rounded-xl mt-3 font-medium">✅ Kaydet</button>
+              <div className="mt-2 bg-gray-800/40 border border-yellow-700/40 rounded-xl p-4 space-y-2">
+                <p className="text-yellow-400 text-xs font-semibold uppercase tracking-wide">Bilgileri Düzenle</p>
+                {[['name','Ad Soyad'],['email','Email'],['phone','Telefon'],['location','Şehir']].map(([k,l])=>(
+                  <input key={k} type="text" placeholder={l} value={editData[k]||''}
+                    onChange={e=>setEditData({...editData,[k]:e.target.value})}
+                    className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 outline-none text-xs border border-gray-700/60 focus:border-yellow-600/60 placeholder-gray-600"/>
+                ))}
+                <textarea placeholder="Hakkımda" value={editData.summary||''} onChange={e=>setEditData({...editData,summary:e.target.value})}
+                  className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 outline-none text-xs h-16 resize-none border border-gray-700/60 placeholder-gray-600"/>
+                <input type="text" placeholder="Beceriler (virgülle)" value={editData.skills?.join(', ')||''}
+                  onChange={e=>setEditData({...editData,skills:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})}
+                  className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 outline-none text-xs border border-gray-700/60 placeholder-gray-600"/>
+                {editData.experience?.map((exp,i)=>(
+                  <div key={i} className="bg-gray-900/60 rounded-lg p-2.5 border border-gray-700/30 space-y-1">
+                    <p className="text-yellow-500/80 text-xs">Deneyim {i+1}</p>
+                    {[['position','Pozisyon'],['company','Şirket'],['duration','Süre']].map(([f,p])=>(
+                      <input key={f} type="text" placeholder={p} value={exp[f]||''}
+                        onChange={e=>{const n=[...editData.experience];n[i]={...n[i],[f]:e.target.value};setEditData({...editData,experience:n})}}
+                        className="w-full bg-gray-800 text-white rounded-lg px-2.5 py-1.5 outline-none text-xs border border-gray-700/40 placeholder-gray-600"/>
+                    ))}
+                    <textarea placeholder="Açıklama" value={exp.description||''} onChange={e=>{const n=[...editData.experience];n[i]={...n[i],description:e.target.value};setEditData({...editData,experience:n})}}
+                      className="w-full bg-gray-800 text-white rounded-lg px-2.5 py-1.5 outline-none text-xs h-12 resize-none border border-gray-700/40 placeholder-gray-600"/>
+                  </div>
+                ))}
+                {editData.education?.map((edu,i)=>(
+                  <div key={i} className="bg-gray-900/60 rounded-lg p-2.5 border border-gray-700/30 space-y-1">
+                    <p className="text-yellow-500/80 text-xs">Eğitim {i+1}</p>
+                    {[['school','Okul'],['degree','Bölüm'],['year','Yıl']].map(([f,p])=>(
+                      <input key={f} type="text" placeholder={p} value={edu[f]||''}
+                        onChange={e=>{const n=[...editData.education];n[i]={...n[i],[f]:e.target.value};setEditData({...editData,education:n})}}
+                        className="w-full bg-gray-800 text-white rounded-lg px-2.5 py-1.5 outline-none text-xs border border-gray-700/40 placeholder-gray-600"/>
+                    ))}
+                  </div>
+                ))}
+                <button onClick={saveEdit} className="w-full bg-yellow-600 hover:bg-yellow-700 text-white text-xs py-2.5 rounded-xl font-medium">✅ Kaydet</button>
               </div>
             )}
           </>
-        )}
-      </div>
-    ),
+      }
+    </div>
+  )
 
-    /* ── ARAÇLAR ── */
-    tools: (
-      <div className="space-y-3">
-        {!cvData ? (
-          <div className="text-center py-8">
-            <p className="text-gray-600 text-sm mb-2">Önce CV oluşturun</p>
-            <button onClick={resetAll} className="text-blue-400 text-xs hover:text-blue-300">← Başa dön</button>
-          </div>
-        ) : (
-          <>
-            <button onClick={handleScoreCV} disabled={scoring}
-              className="w-full flex items-center gap-3 bg-purple-700/80 hover:bg-purple-700 disabled:opacity-50 text-white text-sm py-2.5 px-4 rounded-xl transition-all">
-              {I.star} {scoring?'Puanlanıyor...':'CV\'yi Puanla'}
-            </button>
+  const toolsPanel = (
+    <div className="space-y-3">
+      {!cvData
+        ? <div className="text-center py-8"><p className="text-gray-600 text-sm mb-2">Önce CV oluşturun</p><button onClick={resetAll} className="text-blue-400 text-xs hover:text-blue-300">← Başa dön</button></div>
+        : <>
+            <button onClick={scoreCV} disabled={scoring} className="w-full flex items-center gap-3 bg-purple-700/80 hover:bg-purple-700 disabled:opacity-50 text-white text-sm py-2.5 px-4 rounded-xl transition-all">{Ic.star} {scoring?'Puanlanıyor...':'CV\'yi Puanla'}</button>
             {scoreData && (
               <div className="bg-gray-800/40 border border-gray-700/40 rounded-xl p-3">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-white text-xs font-medium">Toplam Puan</span>
-                  <span className={`text-xl font-bold ${(scoreData.totalScore??scoreData.toplam_puan)>=80?'text-green-400':(scoreData.totalScore??scoreData.toplam_puan)>=60?'text-yellow-400':'text-red-400'}`}>
-                    {scoreData.totalScore??scoreData.toplam_puan??'—'}<span className="text-xs text-gray-600 font-normal">/100</span>
-                  </span>
+                  <span className="text-white text-xs font-medium">Puan</span>
+                  <span className={`text-xl font-bold ${(scoreData.totalScore??0)>=80?'text-green-400':(scoreData.totalScore??0)>=60?'text-yellow-400':'text-red-400'}`}>{scoreData.totalScore??scoreData.toplam_puan??'—'}<span className="text-xs text-gray-600 font-normal">/100</span></span>
                 </div>
-                <div className="w-full bg-gray-800 rounded-full h-1.5 mb-3">
-                  <div className="bg-blue-500 h-1.5 rounded-full" style={{width:`${scoreData.totalScore??scoreData.toplam_puan??0}%`}}/>
-                </div>
+                <div className="w-full bg-gray-800 rounded-full h-1.5 mb-2"><div className="bg-blue-500 h-1.5 rounded-full" style={{width:`${scoreData.totalScore??scoreData.toplam_puan??0}%`}}/></div>
                 {scoreData.strengths?.slice(0,2).map((s,i)=><p key={i} className="text-gray-500 text-xs">💪 {s}</p>)}
                 {scoreData.improvements?.slice(0,2).map((s,i)=><p key={i} className="text-gray-500 text-xs">🔧 {s}</p>)}
               </div>
             )}
-            <div>
-              <p className="text-gray-600 text-xs mb-2">Dil Çevirisi</p>
-              <div className="grid grid-cols-2 gap-1.5">
-                <button onClick={()=>handleTranslate('en')} disabled={translating||currentLang==='en'}
-                  className="flex items-center justify-center gap-1.5 bg-gray-800/80 hover:bg-gray-800 disabled:opacity-40 text-gray-300 hover:text-white text-xs py-2.5 rounded-lg transition-all border border-gray-700/50">
-                  {I.globe} 🇬🇧 İngilizce
-                </button>
-                <button onClick={()=>handleTranslate('tr')} disabled={translating||currentLang==='tr'}
-                  className="flex items-center justify-center gap-1.5 bg-gray-800/80 hover:bg-gray-800 disabled:opacity-40 text-gray-300 hover:text-white text-xs py-2.5 rounded-lg transition-all border border-gray-700/50">
-                  {I.globe} 🇹🇷 Türkçe
-                </button>
-              </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button onClick={()=>translate('en')} disabled={translating||currentLang==='en'}
+                className="flex items-center justify-center gap-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-gray-300 hover:text-white text-xs py-2.5 rounded-lg transition-all border border-gray-700/50">
+                {Ic.globe} 🇬🇧 İngilizce
+              </button>
+              <button onClick={()=>translate('tr')} disabled={translating||currentLang==='tr'}
+                className="flex items-center justify-center gap-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-gray-300 hover:text-white text-xs py-2.5 rounded-lg transition-all border border-gray-700/50">
+                {Ic.globe} 🇹🇷 Türkçe
+              </button>
             </div>
-            <button onClick={handleLinkedin} disabled={generatingLinkedin}
-              className="w-full flex items-center gap-3 bg-blue-800/60 hover:bg-blue-800 disabled:opacity-50 text-white text-sm py-2.5 px-4 rounded-xl transition-all">
-              {I.li} {generatingLinkedin?'Oluşturuluyor...':'LinkedIn Özeti'}
-            </button>
+            <button onClick={linkedin} disabled={generatingLinkedin} className="w-full flex items-center gap-3 bg-blue-800/60 hover:bg-blue-800 disabled:opacity-50 text-white text-sm py-2.5 px-4 rounded-xl transition-all">{Ic.li} {generatingLinkedin?'Oluşturuluyor...':'LinkedIn Özeti'}</button>
             {linkedinSummary && (
               <div className="bg-gray-800/40 border border-blue-900/40 rounded-xl p-3">
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-blue-400 text-xs font-medium">LinkedIn Özeti</p>
-                  <button onClick={()=>navigator.clipboard.writeText(linkedinSummary)} className="text-blue-400 text-xs border border-blue-900/50 px-2 py-0.5 rounded-md">Kopyala</button>
-                </div>
+                <div className="flex justify-between items-center mb-2"><p className="text-blue-400 text-xs font-medium">LinkedIn Özeti</p><button onClick={()=>navigator.clipboard.writeText(linkedinSummary)} className="text-blue-400 text-xs border border-blue-900/50 px-2 py-0.5 rounded-md">Kopyala</button></div>
                 <p className="text-gray-400 text-xs leading-relaxed line-clamp-4">{linkedinSummary}</p>
               </div>
             )}
-            <button onClick={()=>setShowReferenceForm(v=>!v)}
-              className="w-full flex items-center gap-3 bg-orange-700/60 hover:bg-orange-700 text-white text-sm py-2.5 px-4 rounded-xl transition-all">
-              {I.ref} Referans Mektubu
-            </button>
+            <button onClick={()=>setShowReferenceForm(v=>!v)} className="w-full flex items-center gap-3 bg-orange-700/60 hover:bg-orange-700 text-white text-sm py-2.5 px-4 rounded-xl transition-all">{Ic.ref} Referans Mektubu</button>
             {showReferenceForm && (
-              <div className="bg-gray-800/40 border border-orange-800/40 rounded-xl p-3">
-                <div className="space-y-2 mb-2">
-                  {[['refName','Ad Soyad'],['refPosition','Pozisyon'],['refCompany','Şirket'],['relationship','İlişki']].map(([k,p])=>(
-                    <input key={k} type="text" placeholder={p} value={referenceInfo[k]}
-                      onChange={e=>setReferenceInfo({...referenceInfo,[k]:e.target.value})}
-                      className="w-full bg-gray-800 text-white rounded-lg px-3 py-1.5 outline-none text-xs border border-gray-700/50 placeholder-gray-600"/>
-                  ))}
-                </div>
-                <button onClick={handleReference} disabled={generatingReference||!referenceInfo.refName}
-                  className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-xs py-2 rounded-lg">
-                  {generatingReference?'Oluşturuluyor...':'Mektubu Oluştur'}
-                </button>
+              <div className="bg-gray-800/40 border border-orange-800/40 rounded-xl p-3 space-y-2">
+                {[['refName','Ad Soyad'],['refPosition','Pozisyon'],['refCompany','Şirket'],['relationship','İlişki']].map(([k,p])=>(
+                  <input key={k} type="text" placeholder={p} value={referenceInfo[k]} onChange={e=>setReferenceInfo({...referenceInfo,[k]:e.target.value})}
+                    className="w-full bg-gray-800 text-white rounded-lg px-3 py-1.5 outline-none text-xs border border-gray-700/50 placeholder-gray-600"/>
+                ))}
+                <button onClick={reference} disabled={generatingReference||!referenceInfo.refName} className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-xs py-2 rounded-lg">{generatingReference?'Oluşturuluyor...':'Mektubu Oluştur'}</button>
               </div>
             )}
             {referenceLetter && (
               <div className="bg-gray-800/40 border border-orange-900/40 rounded-xl p-3">
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-orange-400 text-xs font-medium">Referans Mektubu</p>
-                  <button onClick={()=>navigator.clipboard.writeText(referenceLetter)} className="text-orange-400 text-xs border border-orange-900/50 px-2 py-0.5 rounded-md">Kopyala</button>
-                </div>
+                <div className="flex justify-between items-center mb-2"><p className="text-orange-400 text-xs font-medium">Referans Mektubu</p><button onClick={()=>navigator.clipboard.writeText(referenceLetter)} className="text-orange-400 text-xs border border-orange-900/50 px-2 py-0.5 rounded-md">Kopyala</button></div>
                 <p className="text-gray-400 text-xs leading-relaxed whitespace-pre-line line-clamp-5">{referenceLetter}</p>
               </div>
             )}
           </>
-        )}
-      </div>
-    ),
-  }
+      }
+    </div>
+  )
 
-  /* ══════════════════════════════ RENDER ══════════════════════════════ */
+  const panelMap = { photo:photoPanel, design:designPanel, actions:actionsPanel, tools:toolsPanel }
+
+  /* ════════════════════════ RENDER ════════════════════════ */
   return (
     <div className="min-h-screen bg-gray-950 pt-16">
       <input ref={fileInputRef} type="file"
         accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
         className="hidden" onChange={handleFileUpload}/>
 
-      {/* ── BAŞLANGIÇ EKRANI ── */}
+      {/* ── BAŞLANGIÇ: seçim ── */}
       {startMode === null && (
-        <div className="fixed inset-0 z-40 bg-gray-950 flex items-center justify-center px-4 pt-16">
+        <div className="fixed inset-0 z-40 bg-gray-950 flex flex-col items-center justify-center px-4 pt-16">
           <div className="w-full max-w-lg">
-            <div className="text-center mb-12">
-              <p className="text-blue-400 text-sm font-medium mb-3 tracking-widest uppercase">Resumind AI</p>
-              <h1 className="text-white text-4xl font-bold mb-3 leading-tight">CV'nizi nasıl<br/>oluşturmak istersiniz?</h1>
-              <p className="text-gray-500 text-base">Yapay zeka birkaç saniyede profesyonel CV hazırlasın</p>
+            <div className="text-center mb-8 sm:mb-12">
+              <p className="text-blue-400 text-xs sm:text-sm font-medium mb-3 tracking-widest uppercase">Resumind AI</p>
+              <h1 className="text-white text-2xl sm:text-4xl font-bold mb-3 leading-tight">CV'nizi nasıl<br/>oluşturmak istersiniz?</h1>
+              <p className="text-gray-500 text-sm sm:text-base">Yapay zeka birkaç saniyede profesyonel CV hazırlasın</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button onClick={handleChooseUpload}
-                className="group relative bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-blue-500/60 rounded-2xl p-7 text-left transition-all hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-0.5">
-                <div className="w-14 h-14 bg-blue-600/15 border border-blue-600/20 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-blue-600/25 transition-all">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth={1.5} className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <button onClick={()=>{setStartMode('upload');setTimeout(()=>fileInputRef.current?.click(),50)}}
+                className="group bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-blue-500/60 rounded-2xl p-5 sm:p-7 text-left transition-all hover:-translate-y-0.5">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-600/15 border border-blue-600/20 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-5 group-hover:bg-blue-600/25 transition-all">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth={1.5} className="w-6 h-6 sm:w-7 sm:h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 </div>
-                <h3 className="text-white font-bold text-lg mb-2">Belge Yükle</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">Mevcut CV'nizi yükleyin, AI bilgilerinizi okuyup profesyonel hale getirir.</p>
-                <div className="flex gap-1.5 mt-4 flex-wrap">
-                  {['PDF','DOCX','TXT'].map(f=><span key={f} className="text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded-md border border-gray-700/50">{f}</span>)}
+                <h3 className="text-white font-bold text-base sm:text-lg mb-1.5 sm:mb-2">Belge Yükle</h3>
+                <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">Mevcut CV'nizi yükleyin, AI profesyonel hale getirir.</p>
+                <div className="flex gap-1.5 mt-3 sm:mt-4 flex-wrap">
+                  {['PDF','DOCX','TXT'].map(f=><span key={f} className="text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded border border-gray-700/50">{f}</span>)}
                 </div>
               </button>
-              <button onClick={handleChooseText}
-                className="group relative bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-purple-500/60 rounded-2xl p-7 text-left transition-all hover:shadow-2xl hover:shadow-purple-500/10 hover:-translate-y-0.5">
-                <div className="w-14 h-14 bg-purple-600/15 border border-purple-600/20 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-purple-600/25 transition-all">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth={1.5} className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              <button onClick={()=>setStartMode('text')}
+                className="group bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-purple-500/60 rounded-2xl p-5 sm:p-7 text-left transition-all hover:-translate-y-0.5">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-purple-600/15 border border-purple-600/20 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-5 group-hover:bg-purple-600/25 transition-all">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth={1.5} className="w-6 h-6 sm:w-7 sm:h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 </div>
-                <h3 className="text-white font-bold text-lg mb-2">Manuel Yaz</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">Kısa notlar yazın, AI profesyonel CV'ye dönüştürsün.</p>
-                <div className="mt-4"><span className="text-xs bg-purple-900/30 text-purple-400 px-2.5 py-0.5 rounded-md border border-purple-800/40">AI ile tamamlar</span></div>
+                <h3 className="text-white font-bold text-base sm:text-lg mb-1.5 sm:mb-2">Manuel Yaz</h3>
+                <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">Kısa notlar yazın, AI profesyonel CV'ye dönüştürsün.</p>
+                <div className="mt-3 sm:mt-4"><span className="text-xs bg-purple-900/30 text-purple-400 px-2.5 py-0.5 rounded border border-purple-800/40">AI ile tamamlar</span></div>
               </button>
             </div>
-            <div className="text-center mt-8">
+            <div className="text-center mt-6 sm:mt-8">
               <button onClick={()=>router.push('/dashboard')} className="text-gray-600 hover:text-gray-400 text-sm transition-all">← Dashboard'a dön</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── MANUEL YAZ ── */}
+      {/* ── BAŞLANGIÇ: manuel yaz ── */}
       {startMode === 'text' && !loading && !cvData && (
-        <div className="fixed inset-0 z-40 bg-gray-950 flex items-center justify-center px-4 pt-16">
-          <div className="w-full max-w-lg">
-            <button onClick={()=>setStartMode(null)} className="flex items-center gap-1.5 text-gray-600 hover:text-white text-sm mb-8 transition-all">{I.back} Geri</button>
-            <h2 className="text-white text-2xl font-bold mb-2">Bilgilerinizi yazın</h2>
-            <p className="text-gray-500 text-sm mb-5">Kısa notlar yeterli — AI profesyonel hale getirecek</p>
-            <textarea value={cvText} onChange={e=>setCvText(e.target.value)}
+        <div className="fixed inset-0 z-40 bg-gray-950 flex flex-col justify-center px-4 pt-16">
+          <div className="w-full max-w-lg mx-auto">
+            <button onClick={()=>setStartMode(null)} className="flex items-center gap-1.5 text-gray-600 hover:text-white text-sm mb-6 sm:mb-8 transition-all">{Ic.back} Geri</button>
+            <h2 className="text-white text-xl sm:text-2xl font-bold mb-1.5 sm:mb-2">Bilgilerinizi yazın</h2>
+            <p className="text-gray-500 text-sm mb-4 sm:mb-5">Kısa notlar yeterli — AI profesyonel hale getirecek</p>
+            <textarea value={cvText} onChange={e=>setCvText(e.target.value)} autoFocus
               placeholder="Örn: Adım Ahmet Yılmaz, 3 yıldır yazılım geliştirici olarak çalışıyorum. React ve Node.js kullandım. İTÜ Bilgisayar Mühendisliği mezunuyum..."
-              className="w-full bg-gray-900 border border-gray-800 focus:border-blue-500/50 text-white rounded-2xl px-5 py-4 h-52 outline-none resize-none text-sm placeholder-gray-600 mb-4" autoFocus/>
+              className="w-full bg-gray-900 border border-gray-800 focus:border-blue-500/50 text-white rounded-2xl px-4 sm:px-5 py-3.5 sm:py-4 h-44 sm:h-52 outline-none resize-none text-sm placeholder-gray-600 mb-4 transition-all"/>
             <button onClick={()=>generateCV(true)} disabled={!cvText.trim()}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold py-3.5 rounded-2xl transition-all text-sm">
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold py-3 sm:py-3.5 rounded-2xl transition-all text-sm sm:text-base">
               ✨ CV Oluştur
             </button>
           </div>
@@ -693,9 +622,9 @@ function CreateCVContent() {
       {/* ── YÜKLEME ── */}
       {loading && (
         <div className="fixed inset-0 z-40 bg-gray-950 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"/>
-            <p className="text-white text-lg font-medium mb-2">CV oluşturuluyor...</p>
+          <div className="text-center px-4">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-5 sm:mb-6"/>
+            <p className="text-white text-base sm:text-lg font-medium mb-1.5 sm:mb-2">CV oluşturuluyor...</p>
             <p className="text-gray-500 text-sm">Yapay zeka bilgilerinizi işliyor</p>
           </div>
         </div>
@@ -703,12 +632,12 @@ function CreateCVContent() {
 
       {/* ── GELİŞTİRME MODALİ ── */}
       {showImproveDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="bg-gray-900 border border-gray-700/60 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm px-4 pb-4 sm:pb-0">
+          <div className="bg-gray-900 border border-gray-700/60 rounded-2xl p-5 sm:p-6 w-full max-w-sm shadow-2xl">
             <div className="text-3xl mb-3 text-center">🤖</div>
             <h2 className="text-white text-lg font-bold text-center mb-2">CV'yi Geliştirelim mi?</h2>
-            <p className="text-gray-500 text-sm text-center mb-5 leading-relaxed">Yapay zeka içeriği profesyonel hale getirsin mi?</p>
-            {pendingPhotoBase64 && <div className="bg-green-900/20 border border-green-800/40 rounded-xl px-3 py-2 mb-4"><p className="text-green-400 text-xs">✅ Belgeden fotoğraf çıkarıldı, eklendi.</p></div>}
+            <p className="text-gray-500 text-sm text-center mb-4 sm:mb-5 leading-relaxed">Yapay zeka içeriği profesyonel hale getirsin mi?</p>
+            {pendingPhotoBase64 && <div className="bg-green-900/20 border border-green-800/40 rounded-xl px-3 py-2 mb-4"><p className="text-green-400 text-xs">✅ Belgeden fotoğraf çıkarıldı.</p></div>}
             {pendingHasPhoto && !pendingPhotoBase64 && <div className="bg-blue-900/20 border border-blue-800/40 rounded-xl px-3 py-2 mb-4"><p className="text-blue-400 text-xs">📸 PDF'de fotoğraf tespit edildi. Fotoğraf sekmesinden yükleyebilirsiniz.</p></div>}
             <div className="space-y-2">
               <button onClick={()=>handleImproveChoice(true)} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all">✨ Evet, Geliştir</button>
@@ -720,59 +649,92 @@ function CreateCVContent() {
 
       {/* ── ANA LAYOUT ── */}
       {(startMode === 'done' || isEdit) && (
-        <div className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)]">
+        <div className="flex min-h-[calc(100vh-64px)]">
 
-          {/* Dikey icon bar */}
-          <div className="hidden lg:flex flex-col items-center gap-1 py-4 px-2 bg-[#111827] border-r border-gray-800/80 w-16 min-h-[calc(100vh-64px)]">
-            <button onClick={()=>router.push('/dashboard')} className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-600 hover:text-white hover:bg-gray-800 transition-all mb-3" title="Dashboard">{I.back}</button>
+          {/* Dikey icon bar — sadece desktop */}
+          <div className="hidden lg:flex flex-col items-center gap-1 py-4 px-2 bg-[#111827] border-r border-gray-800/80 w-16 shrink-0">
+            <button onClick={()=>router.push('/dashboard')} title="Dashboard"
+              className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-600 hover:text-white hover:bg-gray-800 transition-all mb-3">
+              {Ic.back}
+            </button>
             <div className="w-6 h-px bg-gray-800 mb-2"/>
             {TABS.map(tab=>(
               <button key={tab.id} onClick={()=>setActiveTab(tab.id)} title={tab.label}
-                className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all relative ${activeTab===tab.id?'bg-blue-600 text-white shadow-lg shadow-blue-600/30':'text-gray-600 hover:text-gray-300 hover:bg-gray-800/80'}`}>
+                className={`relative w-10 h-10 flex items-center justify-center rounded-xl transition-all ${activeTab===tab.id?'bg-blue-600 text-white shadow-lg shadow-blue-600/30':'text-gray-600 hover:text-gray-300 hover:bg-gray-800/80'}`}>
                 {tab.icon}
-                {tab.id==='photo' && cvPhoto && <span className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full border border-gray-900"/>}
-                {tab.id==='actions' && cvData && <span className="absolute top-1 right-1 w-2 h-2 bg-blue-400 rounded-full border border-gray-900"/>}
+                {tab.id==='photo'   && cvPhoto && <span className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full border border-gray-900"/>}
+                {tab.id==='actions' && cvData  && <span className="absolute top-1 right-1 w-2 h-2 bg-blue-400 rounded-full border border-gray-900"/>}
               </button>
             ))}
           </div>
 
-          {/* Panel */}
-          <div className="lg:w-72 xl:w-80 bg-gray-950 border-r border-gray-800/60 lg:overflow-y-auto lg:h-[calc(100vh-64px)] lg:sticky lg:top-16">
+          {/* Sol panel */}
+          <div className="w-full lg:w-72 xl:w-80 bg-gray-950 border-r border-gray-800/60 shrink-0 lg:overflow-y-auto lg:h-[calc(100vh-64px)] lg:sticky lg:top-16">
+
             {/* Mobil header */}
             <div className="lg:hidden sticky top-0 z-20 bg-gray-950/95 backdrop-blur-sm border-b border-gray-800/60">
-              <div className="flex items-center gap-2 px-3 py-2.5">
-                <button onClick={()=>router.push('/dashboard')} className="flex items-center gap-1.5 text-gray-500 hover:text-white text-xs bg-gray-800/80 px-2.5 py-1.5 rounded-lg transition-all border border-gray-700/40">{I.back} Geri</button>
+              <div className="flex items-center gap-2 px-3 py-2">
+                <button onClick={()=>router.push('/dashboard')}
+                  className="flex items-center gap-1.5 text-gray-500 hover:text-white text-xs bg-gray-800 px-2.5 py-1.5 rounded-lg transition-all border border-gray-700/40">
+                  {Ic.back} Geri
+                </button>
                 <span className="text-white text-sm font-semibold">CV Oluştur</span>
-                {cvData && <span className="ml-auto flex items-center gap-1 text-green-400 text-xs"><span className="w-1.5 h-1.5 bg-green-500 rounded-full"/> Hazır</span>}
+                {cvData && <span className="ml-auto flex items-center gap-1 text-green-400 text-xs"><span className="w-1.5 h-1.5 bg-green-500 rounded-full"/>Hazır</span>}
               </div>
-              <div className="flex gap-0.5 px-3 pb-2 overflow-x-auto">
+              {/* Mobil tab bar */}
+              <div className="flex overflow-x-auto gap-0.5 px-3 pb-2 scrollbar-none">
                 {TABS.map(tab=>(
                   <button key={tab.id} onClick={()=>setActiveTab(tab.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${activeTab===tab.id?'bg-blue-600 text-white':'text-gray-500 hover:text-white hover:bg-gray-800/60'}`}>
-                    <span className="w-4 h-4">{tab.icon}</span>{tab.label}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all shrink-0 ${activeTab===tab.id?'bg-blue-600 text-white':'text-gray-500 hover:text-white hover:bg-gray-800/60'}`}>
+                    <span className="w-3.5 h-3.5">{tab.icon}</span>{tab.label}
                   </button>
                 ))}
               </div>
             </div>
+
+            {/* Desktop panel başlık */}
             <div className="hidden lg:flex items-center px-4 py-3 border-b border-gray-800/40">
               <p className="text-gray-300 text-sm font-semibold">{TABS.find(t=>t.id===activeTab)?.label}</p>
+              {cvData && activeTab!=='actions' && (
+                <button onClick={()=>setActiveTab('actions')} className="ml-auto text-blue-400 text-xs hover:text-blue-300">Eylemler →</button>
+              )}
             </div>
-            <div className="px-4 py-4 pb-8">{panels[activeTab]}</div>
+
+            {/* Panel içeriği */}
+            <div className="px-4 py-4 pb-10">
+              {panelMap[activeTab]}
+            </div>
           </div>
 
-          {/* Önizleme */}
-          <div className="flex-1 flex flex-col bg-gray-900/50 min-h-0">
-            <div className="lg:hidden border-b border-gray-800/60 bg-gray-900/80">
-              <button onClick={()=>setShowMobilePreview(v=>!v)} className="w-full flex items-center justify-center gap-2 py-2.5 text-gray-400 hover:text-white text-sm transition-all">
-                {showMobilePreview ? '🙈 Önizlemeyi Gizle' : <>👁 CV Önizleme {cvData&&<span className="bg-blue-600/20 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-600/30 ml-1">Hazır</span>}</>}
+          {/* Sağ: Önizleme */}
+          <div className="flex-1 flex flex-col min-w-0">
+
+            {/* Mobil: önizleme butonu */}
+            <div className="lg:hidden flex items-center justify-between px-4 py-2.5 bg-gray-900/80 border-b border-gray-800/60">
+              <span className="text-gray-500 text-xs">
+                {cvData ? `${template} şablonu` : 'CV henüz oluşturulmadı'}
+              </span>
+              <button onClick={()=>setShowPreview(v=>!v)}
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all ${showPreview?'bg-blue-600 text-white':'bg-gray-800 text-gray-400 border border-gray-700'}`}>
+                {Ic.eye} {showPreview ? 'Gizle' : 'Önizle'}
               </button>
             </div>
-            {showMobilePreview && <div className="lg:hidden p-3"><CVComponent cvData={cvData||previewData} color={color}/></div>}
+
+            {/* Mobil önizleme */}
+            {showPreview && (
+              <div className="lg:hidden px-3 py-3 bg-gray-900/30 overflow-x-auto">
+                <div className="min-w-[320px]">
+                  <CVComponent cvData={cvData||previewData} color={color}/>
+                </div>
+              </div>
+            )}
+
+            {/* Desktop önizleme */}
             <div className="hidden lg:flex flex-col flex-1 h-[calc(100vh-64px)] sticky top-16">
-              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800/60 shrink-0 bg-gray-900/40">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800/60 bg-gray-900/40 shrink-0">
                 <p className="text-gray-400 text-sm font-medium">Canlı Önizleme</p>
                 <div className="flex items-center gap-2">
-                  <button onClick={resetAll} className="text-gray-600 hover:text-gray-400 text-xs transition-all">← Yeniden</button>
+                  <button onClick={resetAll} className="text-gray-600 hover:text-gray-400 text-xs">← Yeniden</button>
                   <span className="text-xs bg-blue-600/15 text-blue-400 px-2.5 py-1 rounded-full border border-blue-600/25">{template}</span>
                 </div>
               </div>
@@ -789,8 +751,8 @@ function CreateCVContent() {
 
 export default function CreateCV() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center pt-16"><p className="text-white">Yükleniyor...</p></div>}>
-      <CreateCVContent />
+    <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center pt-16"><p className="text-white text-sm">Yükleniyor...</p></div>}>
+      <CreateCVContent/>
     </Suspense>
   )
 }
